@@ -1,0 +1,15 @@
+import { webkit } from '@playwright/test'
+
+const browser = await webkit.launch()
+const page = await browser.newPage({ viewport:{ width:390,height:844 }, deviceScaleFactor:1, isMobile:true, hasTouch:true })
+await page.goto('http://127.0.0.1:5173/')
+await page.evaluate(() => localStorage.clear())
+await page.reload()
+await page.screenshot({ path:'/tmp/ten-strong-onboarding.png', fullPage:true })
+await page.getByRole('button',{ name:'Begin my challenge' }).click()
+await page.screenshot({ path:'/tmp/ten-strong-today.png', fullPage:true })
+await page.getByRole('button',{ name:/readiness/i }).click()
+await page.screenshot({ path:'/tmp/ten-strong-readiness.png', fullPage:true })
+await page.getByRole('button',{ name:/Start Day 1 early|Start Normal session/ }).click()
+await page.screenshot({ path:'/tmp/ten-strong-workout.png', fullPage:true })
+await browser.close()
