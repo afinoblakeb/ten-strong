@@ -8,6 +8,12 @@ describe('local data and import', () => {
     expect(loadData()).toEqual(data)
     expect(parseImport(JSON.stringify(data))).toEqual(data)
   })
+  it('defaults older saved readiness records to having dumbbells', () => {
+    const data=createDefaultData()
+    const legacy=JSON.parse(JSON.stringify(data))
+    legacy.sessions=[{id:'legacy',day:1,date:'2026-07-12',templateId:'assessment',mode:'normal',status:'completed',durationSeconds:600,readiness:{energy:'normal',soreness:'none',pain:'none',availableWeight:10,minutes:10},sets:[]}]
+    expect(parseImport(JSON.stringify(legacy)).sessions[0].readiness.hasDumbbells).toBe(true)
+  })
   it.each(['not json','{}','{"version":2}'])('rejects malformed or unsupported input without mutating storage', (raw) => {
     const original=createDefaultData(); saveData(original)
     expect(()=>parseImport(raw)).toThrow()

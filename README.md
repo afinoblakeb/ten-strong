@@ -16,6 +16,7 @@ No account, backend, analytics, paid API, or remote database is required. Person
 - 8–12 minute normal sessions and a dedicated five-minute fallback
 - Day 1 baseline and Day 90 comparable final assessment
 - Pain-first readiness logic, recovery days, and missed-day re-entry guidance
+- Daily dumbbell yes/no check with a dedicated travel-ready bodyweight queue
 - Push, pull, squat, hinge, unilateral leg, trunk, overhead, and carry coverage
 - Editable exercise library with cues, common mistakes, regressions, progressions, no-equipment alternatives, and stop conditions
 - Transparent progression through load, reps, range, tempo, pauses, leverage, and unilateral work
@@ -115,6 +116,8 @@ Readiness decisions follow a fixed order:
 4. Low energy or mild soreness removes working volume.
 5. Otherwise the planned session proceeds normally.
 
+Equipment is confirmed separately every day. Choosing **Yes, I have them** keeps the planned dumbbell queue and its progression. Choosing **No dumbbells** swaps that day to movement-matched bodyweight exercises, reorganizes them into a low-setup circuit, and logs the workout under a separate bodyweight template. The loaded queue is not consumed or advanced, so it is ready when dumbbells return. The five-minute and recovery decisions still take priority when needed.
+
 Progression is equally explicit. When all prescribed work reaches the top of its range with at least two clean repetitions in reserve and no discomfort, the next sensible heavier dumbbell is preferred. If none exists, the app recommends one harder variable: reps, range, pause, tempo, unilateral work, or leverage. Missing the lower target, reaching unexpected failure, or reporting discomfort prevents progression.
 
 ## Editing program content
@@ -127,7 +130,7 @@ Training content is deliberately separated from React views:
 - `src/lib/engine.ts` — readiness, date, progression, consistency, and missed-day rules
 - `src/types.ts` — shared typed domain model
 
-Any program edit should keep `src/test/program.test.ts` green. The suite verifies 90 continuous days, phase boundaries, valid template references, exercise coaching metadata, and assessment placement.
+Any program edit should keep `src/test/program.test.ts` green. The suite verifies 90 continuous days, phase boundaries, valid template references, exercise coaching metadata, assessment placement, and a valid zero-dumbbell transformation for every template.
 
 ## Data privacy, backup, and restore
 

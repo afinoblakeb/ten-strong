@@ -1,5 +1,5 @@
 import { differenceInCalendarDays, formatISODate, parseLocalDate } from './date'
-import { programForDay, templateById } from '../data/program'
+import { programForDay, resolveTemplateById, templateById } from '../data/program'
 import { exerciseById } from '../data/exercises'
 import type { AppData, Readiness, Recommendation, SessionLog, SetLog, WorkoutItem } from '../types'
 
@@ -66,7 +66,7 @@ function exerciseExposures(data: AppData, exerciseId: string): Array<{ session: 
   return data.sessions
     .filter((session) => session.sets.some((set) => set.exerciseId === exerciseId))
     .sort((a,b) => b.day - a.day)
-    .map((session) => ({ session, logs:session.sets.filter((set) => set.exerciseId === exerciseId), item:templateById[session.templateId]?.items.find((item) => item.exerciseId === exerciseId) ?? { exerciseId, sets:1, repMin:1, repMax:1, tempo:'controlled', restSeconds:0 } }))
+    .map((session) => ({ session, logs:session.sets.filter((set) => set.exerciseId === exerciseId), item:resolveTemplateById(session.templateId)?.items.find((item) => item.exerciseId === exerciseId) ?? { exerciseId, sets:1, repMin:1, repMax:1, tempo:'controlled', restSeconds:0 } }))
 }
 
 function qualifiesForProgression(logs: SetLog[], item: WorkoutItem): boolean {
@@ -75,22 +75,22 @@ function qualifiesForProgression(logs: SetLog[], item: WorkoutItem): boolean {
   return completed.every((log) => !log.discomfort && log.formQuality !== 'degraded' && log.rir >= 2 && (log.reps ?? log.seconds ?? 0) >= (log.targetReps ?? log.targetSeconds ?? item.repMax ?? item.seconds ?? 0))
 }
 
-export function adaptivePrescription(data: AppData, item: WorkoutItem, maximumAvailableWeight: number | null, assessmentMode?: 'baseline' | 'final'): AdaptivePrescription {
+export function adaptivePrescription(data: AppData, item: WorkoutItem, maximumAvailableWeight: number | null, assessmentMode?: 'baseline' | 'final', hasDumbbells = true): AdaptivePrescription {
   const exercise = exerciseById[item.exerciseId]
   if (item.exerciseId==='strength-primer') return { seconds:item.seconds,weight:null,variation:exercise.standard,tempo:item.tempo,action:'start',explanation:'Use this minute to rehearse the first movements, confirm your support is stable, and choose a comfortable range.' }
-  if (assessmentMode === 'baseline') { const needsSubstitute=(!data.profile.hasSturdyChair&&exercise.equipment.some((equipment)=>/chair|couch|counter/.test(equipment)))||(maximumAvailableWeight===null&&exercise.equipment.some((equipment)=>equipment.includes('dumbbell'))); return { repMin:item.repMin, repMax:item.repMax, seconds:item.seconds, weight:needsSubstitute?null:data.profile.dumbbells.filter((weight) => maximumAvailableWeight!==null&&weight <= maximumAvailableWeight).sort((a,b)=>a-b)[0] ?? maximumAvailableWeight, variation:needsSubstitute?exercise.noEquipment:exercise.standard, tempo:item.tempo, action:'start', explanation:'Record a conservative, repeatable starting point. Stop with about 3 technically clean reps still possible.' } }
+  if (assessmentMode === 'baseline') { const needsSubstitute=(!data.profile.hasSturdyChair&&exercise.equipment.some((equipment)=>/chair|couch|counter/.test(equipment)))||(!hasDumbbells&&exercise.equipment.some((equipment)=>equipment.includes('dumbbell'))); return { repMin:item.repMin, repMax:item.repMax, seconds:item.seconds, weight:needsSubstitute?null:data.profile.dumbbells.filter((weight) => maximumAvailableWeight!==null&&weight <= maximumAvailableWeight).sort((a,b)=>a-b)[0] ?? maximumAvailableWeight, variation:needsSubstitute?exercise.noEquipment:exercise.standard, tempo:item.tempo, action:'start', explanation:'Record a conservative, repeatable starting point. Stop with about 3 technically clean reps still possible.' } }
   if (assessmentMode === 'final') {
     const baseline=data.assessments.find((result) => result.day===1 && result.exerciseId===item.exerciseId)
     if (baseline) return { repMin:item.repMin, repMax:item.repMax, seconds:item.seconds, weight:baseline.weight??null, variation:baseline.variation??exercise.standard, tempo:item.tempo, action:'repeat', explanation:`Repeat the Day 1 setup exactly: ${baseline.variation??exercise.standard}${baseline.weight?` at ${baseline.weight} lb`:''}. This keeps the comparison honest.` }
   }
   if (!data.profile.hasSturdyChair && exercise.equipment.some((equipment) => /chair|couch|counter/.test(equipment))) return { repMin:item.repMin, repMax:item.repMax, seconds:item.seconds, weight:exercise.pattern==='pull'?null:maximumAvailableWeight, variation:exercise.noEquipment, tempo:item.tempo, action:'start', explanation:`No sturdy support is listed, so today uses ${exercise.noEquipment}. Never brace on unstable or rolling furniture.` }
-  const availableWeights = data.profile.dumbbells.filter((weight) => maximumAvailableWeight === null ? false : weight <= maximumAvailableWeight).sort((a,b) => a-b)
+  const availableWeights = data.profile.dumbbells.filter((weight) => !hasDumbbells || maximumAvailableWeight === null ? false : weight <= maximumAvailableWeight).sort((a,b) => a-b)
   const exposures = exerciseExposures(data,item.exerciseId)
   const latest = exposures[0]
   const lastWeight = latest ? Math.max(0,...latest.logs.map((log) => log.weight ?? 0)) : 0
   const lastVariation = latest?.logs.find((log) => log.variation)?.variation
-  if (maximumAvailableWeight === null && exercise.equipment.some((equipment) => equipment.includes('dumbbell'))) {
-    return { repMin:item.repMin, repMax:item.repMax, seconds:item.seconds, weight:null, variation:exercise.noEquipment, tempo:item.tempo, action:'start', explanation:`No dumbbell is selected today, so use ${exercise.noEquipment}.` }
+  if (!hasDumbbells && exercise.equipment.some((equipment) => equipment.includes('dumbbell'))) {
+    return { repMin:item.repMin, repMax:item.repMax, seconds:item.seconds, weight:null, variation:exercise.noEquipment, tempo:item.tempo, action:'start', explanation:`No dumbbells are available today, so use ${exercise.noEquipment}.` }
   }
   if (!latest) {
     const startingWeight = availableWeights[0] ?? maximumAvailableWeight

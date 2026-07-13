@@ -79,6 +79,7 @@ export interface Readiness {
   energy: Energy
   soreness: Soreness
   pain: Pain
+  hasDumbbells: boolean
   availableWeight: number | null
   minutes: 5 | 10
 }

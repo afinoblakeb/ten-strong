@@ -1,5 +1,12 @@
 # Changelog
 
+## 1.1.0 — 2026-07-12
+
+- Added an explicit daily dumbbell availability check
+- Added movement-matched, zero-equipment bodyweight queues for every workout
+- Isolated travel workout drafts and progressions from normal loaded sessions
+- Added backward-compatible readiness persistence and mobile browser coverage
+
 ## 1.0.0 — 2026-07-12
 
 - Initial complete Ten Strong release

@@ -3,7 +3,7 @@ import { adaptivePrescription, calculateProgression, getChallengeDay, recommenda
 import { createDefaultData } from '../lib/storage'
 import type { Readiness, SessionLog, SetLog, WorkoutItem } from '../types'
 
-const base: Readiness = { energy:'normal', soreness:'none', pain:'none', availableWeight:10, minutes:10 }
+const base: Readiness = { energy:'normal', soreness:'none', pain:'none', hasDumbbells:true, availableWeight:10, minutes:10 }
 const item: WorkoutItem = { exerciseId:'goblet-squat', sets:2, repMin:8, repMax:12, tempo:'3–1–1', restSeconds:20 }
 const logs = (reps:number, rir:number, discomfort=false): SetLog[] => [1,2].map((setNumber)=>({ id:String(setNumber), exerciseId:'goblet-squat', setNumber, reps, weight:10, rir, discomfort, completed:true }))
 

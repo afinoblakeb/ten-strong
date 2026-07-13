@@ -2,13 +2,13 @@ import { useMemo, useState } from 'react'
 import { useNavigate } from 'react-router-dom'
 import { ArrowRight, CheckCircle2, Clock3, Dumbbell, Gauge, Trophy, X } from 'lucide-react'
 import { useAppState } from '../AppState'
-import { phaseForDay, programForDay, templateById } from '../data/program'
+import { bodyweightTemplateFor, phaseForDay, programForDay, templateById } from '../data/program'
 import { exerciseById } from '../data/exercises'
-import { adaptivePrescription, consistencyRate, getChallengeDay, recommendationForDay, reentryNote, targetRirForDay, todayPlan } from '../lib/engine'
+import { adaptivePrescription, consistencyRate, getChallengeDay, recommendationForDay, reentryNote, targetRirForDay, templateForMode, todayPlan } from '../lib/engine'
 import { differenceInCalendarDays, parseLocalDate } from '../lib/date'
 import type { Readiness } from '../types'
 
-const defaultReadiness: Readiness = { energy:'normal', soreness:'none', pain:'none', availableWeight:null, minutes:10 }
+const defaultReadiness: Readiness = { energy:'normal', soreness:'none', pain:'none', hasDumbbells:true, availableWeight:null, minutes:10 }
 
 export function TodayPage() {
   const { data } = useAppState()
@@ -24,6 +24,7 @@ export function TodayPage() {
   const rate = consistencyRate(data)
   const daysUntilStart = Math.max(0,-differenceInCalendarDays(new Date(),parseLocalDate(data.profile.startDate)))
   const recommendation = recommendationForDay(data,day,readiness,template.kind)
+  const bodyweightPreview = bodyweightTemplateFor(templateForMode(template.id,recommendation.mode))
   const prescriptions = useMemo(() => template.items.map((item) => ({ item, exercise:exerciseById[item.exerciseId], prescription:adaptivePrescription(data,item,highestWeight,template.id==='assessment'?'baseline':template.id==='final-assessment'?'final':undefined) })),[data,template,highestWeight])
   const personalRecords = useMemo(() => {
     if (!existing) return []
@@ -58,7 +59,8 @@ export function TodayPage() {
       <fieldset><legend>Soreness</legend><div className="segmented">{(['none','mild','significant'] as const).map(v=><button type="button" className={readiness.soreness===v?'selected':''} onClick={()=>setReadiness({...readiness,soreness:v})} key={v}>{v}</button>)}</div></fieldset>
       <fieldset><legend>Pain beyond normal muscle effort?</legend><div className="segmented two">{(['none','present'] as const).map(v=><button type="button" className={readiness.pain===v?'selected':''} onClick={()=>setReadiness({...readiness,pain:v})} key={v}>{v}</button>)}</div></fieldset>
       <fieldset><legend>Time available</legend><div className="segmented two">{([5,10] as const).map(v=><button type="button" className={readiness.minutes===v?'selected':''} onClick={()=>setReadiness({...readiness,minutes:v})} key={v}>{v} minutes</button>)}</div></fieldset>
-      <label>Heaviest dumbbell available today<select value={readiness.availableWeight ?? ''} onChange={(e)=>setReadiness({...readiness,availableWeight:e.target.value ? Number(e.target.value):null})}><option value="">No dumbbell / not sure</option>{data.profile.dumbbells.map(w=><option key={w} value={w}>{w} lb</option>)}</select></label>
+      <fieldset><legend>Dumbbells today?</legend><div className="segmented two"><button type="button" className={readiness.hasDumbbells?'selected':''} onClick={()=>setReadiness({...readiness,hasDumbbells:true,availableWeight:readiness.availableWeight??highestWeight})}>Yes, I have them</button><button type="button" className={!readiness.hasDumbbells?'selected':''} onClick={()=>setReadiness({...readiness,hasDumbbells:false,availableWeight:null})}>No dumbbells</button></div></fieldset>
+      {readiness.hasDumbbells?<label>Heaviest dumbbell available today<select value={readiness.availableWeight ?? ''} onChange={(e)=>setReadiness({...readiness,availableWeight:e.target.value ? Number(e.target.value):null})}><option value="">Weight not listed / not sure</option>{data.profile.dumbbells.map(w=><option key={w} value={w}>{w} lb</option>)}</select></label>:recommendation.mode!=='stop'&&<section className="bodyweight-queue" aria-live="polite"><strong>Bodyweight travel session queued</strong><p>Today swaps to a zero-equipment circuit. Your normal dumbbell queue and loaded progression stay ready for the next day you have them.</p><div>{bodyweightPreview.items.map((item)=><span key={item.exerciseId}>{exerciseById[item.exerciseId].name}</span>)}</div>{template.kind==='assessment'&&<small>For a true Day 1 / Day 90 comparison, repeat the final test later with the same equipment setup when practical.</small>}</section>}
       {readiness.minutes===5&&recentMinimums>=2&&<div className="minimum-nudge"><strong>The minimum has protected the habit.</strong><span>If ten minutes is realistic today, the full session will move strength forward more. Five minutes still counts when that is what the day allows.</span></div>}
       <div className={`readiness-result ${recommendation.mode}`}><strong>{recommendation.title}</strong><p>{recommendation.explanation}</p><small>{targetRirForDay(day,recommendation.mode)}</small></div>
       <button className="button primary wide" onClick={start}>{recommendation.mode==='stop'?'View safety guidance':daysUntilStart?'Start Day 1 early':`Start ${recommendation.title}`}</button></section></div>}

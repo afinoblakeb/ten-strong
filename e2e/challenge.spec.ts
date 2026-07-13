@@ -64,6 +64,28 @@ test('restores an in-progress workout at the exact next exercise', async ({ page
   await expect(page.getByRole('heading',{name:'Goblet Squat'})).toBeVisible()
 })
 
+test('swaps today to a separate bodyweight queue and restores the normal queue later', async ({ page }) => {
+  await page.getByLabel('Dumbbell weights in pounds optional').fill('10, 15, 25')
+  await page.getByRole('button',{name:'Begin my challenge'}).click()
+  await page.getByRole('button',{name:/readiness/i}).click()
+  await page.getByRole('button',{name:'No dumbbells'}).click()
+  await expect(page.getByText('Bodyweight travel session queued')).toBeVisible()
+  await expect(page.getByText('Bodyweight Tempo Squat')).toBeVisible()
+  await page.getByRole('button',{name:/Start Day 1 early|Start Normal session/}).click()
+  await expect(page.getByText(/Bodyweight travel session/)).toBeVisible()
+  await page.getByRole('button',{name:/Start timer/}).last().click()
+  await page.getByRole('button',{name:/Complete set/}).click()
+  await expect(page.getByRole('heading',{name:'Wall Push-up'})).toBeVisible()
+  await expect(page.getByLabel(/Weight/)).toHaveCount(0)
+  await page.getByRole('button',{name:/Exit workout/}).click()
+  await page.getByRole('button',{name:/readiness/i}).click()
+  await expect(page.getByRole('button',{name:'Yes, I have them'})).toHaveClass(/selected/)
+  await page.getByRole('button',{name:/Start Day 1 early|Start Normal session/}).click()
+  await page.getByRole('button',{name:/Start timer/}).last().click()
+  await page.getByRole('button',{name:/Complete set/}).click()
+  await expect(page.getByRole('heading',{name:'Incline Push-up'})).toBeVisible()
+})
+
 test('chooses dedicated minimum and recovery sessions from readiness', async ({ page }) => {
   await page.getByRole('button',{name:'Begin my challenge'}).click()
   await page.getByRole('button',{name:/readiness/i}).click()

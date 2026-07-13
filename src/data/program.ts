@@ -1,4 +1,5 @@
 import type { Phase, ProgramDay, WorkoutTemplate } from '../types'
+import { exerciseById } from './exercises'
 
 export const phases: Phase[] = [
   { id:1, name:'Re-entry & movement quality', start:1, end:14, intent:'Rebuild tolerance, learn the movements, and establish the ten-minute cue.', effort:'Easy to moderate · finish with 3–4 reps in reserve' },
@@ -75,6 +76,46 @@ export const templates: WorkoutTemplate[] = [
 ]
 
 export const templateById = Object.fromEntries(templates.map((template) => [template.id, template]))
+
+const bodyweightExerciseMap: Record<string,string> = {
+  'strength-primer':'strength-primer',
+  'incline-pushup':'wall-pushup',
+  'pushup':'pushup',
+  'floor-press':'pushup',
+  'oh-press':'pike-press',
+  'one-arm-row':'prone-w',
+  'rear-delt-row':'prone-w',
+  'goblet-squat':'bodyweight-squat',
+  'split-squat':'bodyweight-split-squat',
+  'reverse-lunge':'bodyweight-reverse-lunge',
+  'rdl':'glute-bridge',
+  'single-rdl':'glute-bridge',
+  'glute-bridge':'glute-bridge',
+  'dead-bug':'dead-bug',
+  'side-plank':'side-plank',
+  'suitcase-carry':'tall-march',
+  'calf-raise':'calf-raise',
+  'recovery-flow':'recovery-flow',
+}
+
+const bodyweightPatternOrder = { push:0, squat:1, unilateral:1, pull:2, hinge:3, trunk:4, carry:5, recovery:6 }
+
+export function bodyweightTemplateFor(template: WorkoutTemplate): WorkoutTemplate {
+  if (template.id.endsWith('--bodyweight')) return template
+  const items = template.items
+    .map((item,index) => ({ ...item, exerciseId:bodyweightExerciseMap[item.exerciseId] ?? item.exerciseId, index }))
+    .sort((a,b) => bodyweightPatternOrder[exerciseById[a.exerciseId].pattern] - bodyweightPatternOrder[exerciseById[b.exerciseId].pattern] || a.index-b.index)
+    .map(({index:_,...item}) => item)
+  return { ...template, id:`${template.id}--bodyweight`, title:`Bodyweight · ${template.title}`, focus:`Travel-ready ${template.focus.toLowerCase()}`, equipment:['floor','wall'], items }
+}
+
+export function resolveTemplateById(id: string): WorkoutTemplate | undefined {
+  if (id.endsWith('--bodyweight')) {
+    const base = templateById[id.slice(0,-'--bodyweight'.length)]
+    return base ? bodyweightTemplateFor(base) : undefined
+  }
+  return templateById[id]
+}
 
 const phaseCycle: Record<number, string[]> = {
   1: ['foundation-a','recovery','foundation-b','recovery','unilateral','recovery','foundation-a'],

@@ -2,6 +2,7 @@ import { createContext, useContext, useEffect, useMemo, useState, type ReactNode
 import type { AppData, BodyWeightEntry, SessionLog, UserProfile } from './types'
 import { createDefaultData, loadData, saveData } from './lib/storage'
 import { formatISODate } from './lib/date'
+import { resolveTemplateById } from './data/program'
 
 interface AppStateValue {
   data: AppData
@@ -33,7 +34,7 @@ export function AppStateProvider({ children }: { children: ReactNode }) {
     completeOnboarding:(profile) => setData((current) => ({ ...current, profile:{ ...profile, onboardingComplete:true }, bodyWeights:profile.weightLb ? [{ date:profile.startDate, weightLb:profile.weightLb }] : [] })),
     addSession:(session) => setData((current) => {
       if (current.sessions.some((item) => item.id === session.id)) return current
-      const assessmentSets = ['assessment','final-assessment'].includes(session.templateId) ? session.sets.filter((set) => set.completed).map((set) => ({ id:`${session.id}-${set.exerciseId}`, date:session.date, day:session.day, metric:set.reps !== undefined ? 'clean repetitions' : 'clean hold', value:set.reps ?? set.seconds ?? 0, unit:set.reps !== undefined ? 'reps' : 'seconds', exerciseId:set.exerciseId, weight:set.weight, variation:set.variation })) : []
+      const assessmentSets = resolveTemplateById(session.templateId)?.kind === 'assessment' ? session.sets.filter((set) => set.completed).map((set) => ({ id:`${session.id}-${set.exerciseId}`, date:session.date, day:session.day, metric:set.reps !== undefined ? 'clean repetitions' : 'clean hold', value:set.reps ?? set.seconds ?? 0, unit:set.reps !== undefined ? 'reps' : 'seconds', exerciseId:set.exerciseId, weight:set.weight, variation:set.variation })) : []
       return { ...current, sessions:[...current.sessions.filter((item) => item.day !== session.day), session], assessments:[...current.assessments.filter((item) => item.day !== session.day), ...assessmentSets] }
     }),
     addBodyWeight:(entry) => setData((current) => ({ ...current, bodyWeights:[...current.bodyWeights.filter((item) => item.date !== entry.date), entry].sort((a,b) => a.date.localeCompare(b.date)) })),

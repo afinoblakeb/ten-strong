@@ -5,10 +5,10 @@ Date: 2026-07-12
 ## Automated results
 
 - TypeScript: passed
-- Vitest: 41 tests passed across 3 files
+- Vitest: 44 tests passed across 3 files
 - Oxlint: passed with no warnings
 - Production PWA build: passed
-- Playwright: 12 tests passed across desktop Chromium and iPhone 13 WebKit profiles
+- Playwright: 14 tests passed across desktop Chromium and iPhone 13 WebKit profiles
 - Accessibility: onboarding, Today, and active workout pass automated WCAG A/AA checks
 - Offline production test: passed
 - npm audit: 0 vulnerabilities reported at install time
@@ -21,6 +21,9 @@ Date: 2026-07-12
 - Pain takes precedence over all energy, soreness, and time combinations.
 - Significant soreness takes precedence over a five-minute strength fallback.
 - Low energy and mild soreness reduce working volume.
+- Every workout template resolves to a no-dumbbell queue without loaded equipment requirements.
+- Switching to a travel session preserves a separate draft and restores the normal loaded queue when dumbbells return.
+- Older backups without the daily dumbbell flag import with a safe backward-compatible default.
 - Top-of-range performance with 2+ RIR selects the next available weight.
 - Discomfort, failure, or a missed lower target prevents progression.
 - Local date calculation survives daylight-saving boundaries and caps at Day 90.

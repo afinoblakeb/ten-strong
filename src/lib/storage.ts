@@ -4,7 +4,7 @@ import { formatISODate } from './date'
 
 const STORAGE_KEY = 'ten-strong-data-v1'
 
-const readinessSchema = z.object({ energy:z.enum(['low','normal','high']), soreness:z.enum(['none','mild','significant']), pain:z.enum(['none','present']), availableWeight:z.number().nullable(), minutes:z.union([z.literal(5),z.literal(10)]) })
+const readinessSchema = z.object({ energy:z.enum(['low','normal','high']), soreness:z.enum(['none','mild','significant']), pain:z.enum(['none','present']), hasDumbbells:z.boolean().default(true), availableWeight:z.number().nullable(), minutes:z.union([z.literal(5),z.literal(10)]) })
 const setSchema = z.object({ id:z.string(), exerciseId:z.string(), setNumber:z.number(), reps:z.number().optional(), seconds:z.number().optional(), weight:z.number().optional(), rir:z.number().min(0).max(4), formQuality:z.enum(['good','degraded']).optional(), variation:z.string().optional(), targetReps:z.number().optional(), targetSeconds:z.number().optional(), tempo:z.string().optional(), discomfort:z.boolean().optional(), note:z.string().optional(), completed:z.boolean() })
 const sessionSchema = z.object({ id:z.string(), day:z.number().min(1).max(90), date:z.string(), templateId:z.string(), mode:z.enum(['normal','reduced','recovery','minimum','stop']), status:z.enum(['completed','partial','recovery','missed']), durationSeconds:z.number().nonnegative(), readiness:readinessSchema, recommendationExplanation:z.string().optional(), sets:z.array(setSchema), note:z.string().optional() })
 
