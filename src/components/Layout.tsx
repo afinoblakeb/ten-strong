@@ -14,7 +14,7 @@ export function Layout() {
   const hideNav = location.pathname.startsWith('/workout') || location.pathname === '/onboarding'
   return <div className="app-shell">
     <header className="topbar"><NavLink to="/today" className="brand" aria-label="Ten Strong home"><span className="brand-mark">10</span><span>Ten Strong</span></NavLink><span className="privacy-pill">Private by default</span></header>
-    <main id="main-content">
+    <main id="main-content" tabIndex={-1}>
       {loadFailure && <div className="storage-warning recovery-banner" role="alert">
         <p><strong>Your saved data could not be read.</strong> {loadFailure.hasRecoveryCopy ? 'The unreadable copy is kept safe on this device. Download it now — it may be repairable, and you can also restore an exported backup from Settings.' : 'You can restore an exported backup from Settings.'} Nothing new will be saved until you choose how to continue.</p>
         <div className="button-stack">
