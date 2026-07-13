@@ -4,22 +4,23 @@ import { formatISODate } from './date'
 
 const STORAGE_KEY = 'ten-strong-data-v1'
 
-const readinessSchema = z.object({ energy:z.enum(['low','normal','high']), soreness:z.enum(['none','mild','significant']), pain:z.enum(['none','present']), hasDumbbells:z.boolean().default(true), availableWeight:z.number().nullable(), minutes:z.union([z.literal(5),z.literal(10)]) })
-const setSchema = z.object({ id:z.string(), exerciseId:z.string(), setNumber:z.number(), reps:z.number().optional(), seconds:z.number().optional(), weight:z.number().optional(), rir:z.number().min(0).max(4), formQuality:z.enum(['good','degraded']).optional(), variation:z.string().optional(), targetReps:z.number().optional(), targetSeconds:z.number().optional(), tempo:z.string().optional(), discomfort:z.boolean().optional(), mobilityComfort:z.enum(['comfortable','limited']).optional(), note:z.string().optional(), completed:z.boolean() })
+const readinessSchema = z.object({ energy:z.enum(['low','normal','high']), soreness:z.enum(['none','mild','significant']), pain:z.enum(['none','present']), hasDumbbells:z.boolean().default(true), availableWeight:z.number().nullable(), minutes:z.union([z.literal(5),z.literal(10)]).optional() })
+const setSchema = z.object({ id:z.string(), exerciseId:z.string(), setNumber:z.number(), reps:z.number().optional(), seconds:z.number().optional(), weight:z.number().optional(), rir:z.number().min(0).max(4), formQuality:z.enum(['good','degraded']).optional(), variation:z.string().optional(), targetReps:z.number().optional(), targetRepMax:z.number().optional(), targetSeconds:z.number().optional(), tempo:z.string().optional(), discomfort:z.boolean().optional(), mobilityComfort:z.enum(['comfortable','limited']).optional(), note:z.string().optional(), completed:z.boolean() })
 const sessionSchema = z.object({ id:z.string(), day:z.number().min(1), date:z.string(), templateId:z.string(), mode:z.enum(['normal','reduced','recovery','minimum','stop']), status:z.enum(['completed','partial','recovery','safety','missed']), durationSeconds:z.number().nonnegative(), activitySeconds:z.number().nonnegative().optional(), readiness:readinessSchema, recommendationExplanation:z.string().optional(), sets:z.array(setSchema), note:z.string().optional() })
 
 export const appDataSchema = z.object({
   version:z.literal(1),
-  profile:z.object({ label:z.string(), ageRange:z.string(), height:z.string(), weightLb:z.number().positive(), trainingHistory:z.string(), activityLevel:z.string(), dumbbells:z.array(z.number().positive()), limitations:z.string(), preferredTime:z.string(), habitAnchor:z.string().default('After I get ready'), hasSturdyChair:z.boolean().default(true), startDate:z.string(), photoReminder:z.boolean(), onboardingComplete:z.boolean() }),
+  profile:z.object({ label:z.string(), ageRange:z.string(), height:z.string(), weightLb:z.number().positive(), trainingHistory:z.string(), activityLevel:z.string(), dumbbells:z.array(z.number().positive()), limitations:z.string(), preferredTime:z.string(), habitAnchor:z.string().default('After I get ready'), hasSturdyChair:z.boolean().default(true), startDate:z.string(), photoReminder:z.boolean(), onboardingComplete:z.boolean(), soundCues:z.boolean().default(true), cueConfirmedThrough:z.string().optional() }),
   sessions:z.array(sessionSchema),
   assessments:z.array(z.object({ id:z.string(), date:z.string(), day:z.number(), metric:z.string(), value:z.number(), unit:z.string(), exerciseId:z.string().optional(), weight:z.number().optional(), variation:z.string().optional(), tempo:z.string().optional() })),
   bodyWeights:z.array(z.object({ date:z.string(), weightLb:z.number().positive() })),
   lastOpenedDate:z.string(),
+  lastBackupAt:z.string().optional(),
 })
 
 export function createDefaultData(): AppData {
   const tomorrow = new Date(); tomorrow.setDate(tomorrow.getDate() + 1)
-  return { version:1, profile:{ label:'My 90-Day Challenge', ageRange:'30–39', height:`5'9"`, weightLb:140, trainingHistory:'Formerly athletic; detrained', activityLevel:'Mostly sedentary', dumbbells:[], limitations:'', preferredTime:'Morning', habitAnchor:'After I get ready', hasSturdyChair:true, startDate:formatISODate(tomorrow), photoReminder:false, onboardingComplete:false }, sessions:[], assessments:[], bodyWeights:[], lastOpenedDate:formatISODate(new Date()) }
+  return { version:1, profile:{ label:'My 90-Day Challenge', ageRange:'30–39', height:`5'9"`, weightLb:140, trainingHistory:'Formerly athletic; detrained', activityLevel:'Mostly sedentary', dumbbells:[], limitations:'', preferredTime:'Morning', habitAnchor:'After I get ready', hasSturdyChair:true, startDate:formatISODate(tomorrow), photoReminder:false, onboardingComplete:false, soundCues:true }, sessions:[], assessments:[], bodyWeights:[], lastOpenedDate:formatISODate(new Date()) }
 }
 
 export function loadData(): AppData {

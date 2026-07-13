@@ -28,6 +28,8 @@ export interface UserProfile {
   startDate: string
   photoReminder: boolean
   onboardingComplete: boolean
+  soundCues: boolean
+  cueConfirmedThrough?: string
 }
 
 export interface Exercise {
@@ -90,7 +92,7 @@ export interface Readiness {
   pain: Pain
   hasDumbbells: boolean
   availableWeight: number | null
-  minutes: 5 | 10
+  minutes?: 5 | 10
 }
 
 export type RecommendationMode = 'normal' | 'reduced' | 'recovery' | 'minimum' | 'stop'
@@ -113,6 +115,7 @@ export interface SetLog {
   formQuality?: 'good' | 'degraded'
   variation?: string
   targetReps?: number
+  targetRepMax?: number
   targetSeconds?: number
   tempo?: string
   discomfort?: boolean
@@ -161,4 +164,5 @@ export interface AppData {
   assessments: AssessmentResult[]
   bodyWeights: BodyWeightEntry[]
   lastOpenedDate: string
+  lastBackupAt?: string
 }

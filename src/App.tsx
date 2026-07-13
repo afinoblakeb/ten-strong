@@ -6,7 +6,11 @@ import { OnboardingPage } from './pages/OnboardingPage'
 import { TodayPage } from './pages/TodayPage'
 import { WorkoutPage } from './pages/WorkoutPage'
 import { CalendarPage, ExerciseLibraryPage, MethodologyPage, MorePage, PlanPage, ProgressPage, RecoveryPage, SettingsPage } from './pages/ExplorePages'
-import './App.css'
+import './styles/base.css'
+import './styles/onboarding.css'
+import './styles/today.css'
+import './styles/workout.css'
+import './styles/explore.css'
 
 function TitleManager() {
   const { pathname } = useLocation()
