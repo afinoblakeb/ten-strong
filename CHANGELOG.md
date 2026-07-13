@@ -1,5 +1,14 @@
 # Changelog
 
+## 1.4.1 — 2026-07-13
+
+- Added read-only previews for every challenge day from the Calendar and Plan
+- Added previous/next day browsing with the scheduled focus, movements, targets,
+  phase effort, equipment, and actual challenge date
+- Kept future sessions locked so looking ahead cannot create logs, drafts, or alter
+  adaptive progression; the exact prescription still responds to readiness and
+  dumbbell availability on the day
+
 ## 1.4.0 — 2026-07-13
 
 Full usability overhaul driven by a 122-finding audit of the live app.

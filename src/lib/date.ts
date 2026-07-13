@@ -15,3 +15,9 @@ export function differenceInCalendarDays(later: Date, earlier: Date): number {
   const b = Date.UTC(earlier.getFullYear(), earlier.getMonth(), earlier.getDate())
   return Math.floor((a - b) / 86400000)
 }
+
+export function challengeDateForDay(startDate: string, day: number): Date {
+  const date = parseLocalDate(startDate)
+  date.setDate(date.getDate() + Math.max(0, day - 1))
+  return date
+}

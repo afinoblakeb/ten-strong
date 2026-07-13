@@ -75,6 +75,35 @@ test('onboarding blocks empty submits and reads messy dumbbell input', async ({ 
   await expect(page.getByRole('heading',{ name:'Starting point' })).toBeVisible()
 })
 
+test('previews future days without changing progress or starting a workout', async ({ page }) => {
+  await completeOnboarding(page,'10, 15, 25')
+  await page.getByRole('link',{ name:'Calendar' }).click()
+  await expect(page.getByText('Tap any day to preview the session. Looking never changes your progress.')).toBeVisible()
+  await page.getByRole('link',{ name:/Day 8, Pull \+ hinge, upcoming\. Preview session\./ }).click()
+
+  await expect(page.getByRole('heading',{ name:'Pull + hinge' })).toBeVisible()
+  await expect(page.getByText('Preview only — nothing is being started.')).toBeVisible()
+  await expect(page.getByRole('button',{ name:/start/i })).toHaveCount(0)
+  await expect(page.getByRole('link',{ name:/start/i })).toHaveCount(0)
+  await expect(page.getByText('Supported One-arm Row')).toBeVisible()
+  const dimensions=await page.evaluate(()=>({scroll:document.documentElement.scrollWidth,client:document.documentElement.clientWidth}))
+  expect(dimensions.scroll).toBeLessThanOrEqual(dimensions.client)
+
+  await page.getByRole('link',{ name:'Preview Day 9' }).click()
+  await expect(page.getByRole('heading',{ name:'Press + squat' })).toBeVisible()
+  await page.getByRole('link',{ name:'Preview Day 8' }).click()
+  await expect(page.getByRole('heading',{ name:'Pull + hinge' })).toBeVisible()
+
+  const accessibility=await new AxeBuilder({page}).withTags(['wcag2a','wcag2aa']).analyze()
+  expect(accessibility.violations).toEqual([])
+  const saved=await page.evaluate(()=>JSON.parse(localStorage.getItem('ten-strong-data-v1')??'{}'))
+  expect(saved.sessions).toHaveLength(0)
+  const drafts=await page.evaluate(()=>Object.keys(localStorage).filter((key)=>key.startsWith('ten-strong-draft-d')))
+  expect(drafts).toEqual([])
+  await page.getByRole('link',{ name:'All 90 days' }).click()
+  await expect(page.getByRole('heading',{ name:'90-day calendar' })).toBeVisible()
+})
+
 test('onboarding and Today have no automatically detectable WCAG A/AA violations', async ({ page }) => {
   const onboarding=await new AxeBuilder({page}).withTags(['wcag2a','wcag2aa']).analyze()
   expect(onboarding.violations).toEqual([])
