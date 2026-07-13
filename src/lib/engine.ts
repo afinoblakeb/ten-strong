@@ -96,6 +96,8 @@ export function adaptivePrescription(data: AppData, item: WorkoutItem, maximumAv
     const startingWeight = availableWeights[0] ?? maximumAvailableWeight
     return { repMin:item.repMin, repMax:item.repMax, seconds:item.seconds, weight:startingWeight, variation:exercise.standard, tempo:item.tempo, action:'start', explanation:`Start with ${exercise.standard}. Keep the first exposure conservative and calibrate from clean reps.` }
   }
+  const heaviestAvailable=availableWeights.at(-1)??maximumAvailableWeight
+  if (lastWeight>0&&heaviestAvailable!==null&&lastWeight>heaviestAvailable) return { repMin:item.repMin,repMax:item.repMax,seconds:item.seconds,weight:heaviestAvailable,variation:exercise.progression,tempo:item.tempo,action:'harder-variation',explanation:`The previous ${lastWeight} lb load is not available today. Use ${exercise.progression} with ${heaviestAvailable} lb so the lighter load stays useful.` }
   const latestCompleted = latest.logs.filter((log) => log.completed)
   const safetyVeto = latest.logs.some((log) => log.discomfort || log.formQuality === 'degraded')
   if (safetyVeto) {
@@ -104,8 +106,8 @@ export function adaptivePrescription(data: AppData, item: WorkoutItem, maximumAv
   }
   const belowTarget = latestCompleted.some((log) => (log.reps ?? log.seconds ?? 0) < (log.targetReps ?? log.targetSeconds ?? latest.item.repMin ?? latest.item.seconds ?? 0) || log.rir === 0)
   if (belowTarget || latestCompleted.length < latest.logs.length) {
-    const lighter = ([...availableWeights].reverse().find((weight) => weight < lastWeight) ?? Math.min(lastWeight, maximumAvailableWeight ?? lastWeight)) || null
-    return { repMin:item.repMin, repMax:item.repMin, seconds:item.seconds, weight:lighter, variation:lastVariation ?? exercise.standard, tempo:item.tempo, action:'reduce', explanation:'The last exposure missed the lower target, reached failure, or was incomplete. Today returns to the lower target without adding work.' }
+    const lighter = [...availableWeights].reverse().find((weight) => weight < lastWeight) ?? null
+    return { repMin:item.repMin, repMax:item.repMin, seconds:item.seconds, weight:lighter, variation:exercise.regression, tempo:item.tempo, action:'reduce', explanation:`The last exposure missed the lower target, reached failure, or was incomplete. Today uses ${exercise.regression}${lighter?` at ${lighter} lb`:' without added load'} and does not add work.` }
   }
   const twoQualified = exposures.slice(0,2).length === 2 && exposures.slice(0,2).every((exposure) => qualifiesForProgression(exposure.logs,exposure.item))
   if (twoQualified) {

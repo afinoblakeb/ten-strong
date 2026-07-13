@@ -39,4 +39,9 @@ describe('90-day program', () => {
       template.items.forEach((item) => expect(exercises.some((exercise) => exercise.id===item.exerciseId)).toBe(true))
     })
   })
+
+  it.each([[2,8],[15,21],[36,42],[64,70]])('covers every foundational pattern across Days %i–%i', (start,end) => {
+    const patterns=new Set(fullProgram.filter((day)=>day.day>=start&&day.day<=end).flatMap((day)=>templateById[day.templateId].items.map((item)=>exercises.find((exercise)=>exercise.id===item.exerciseId)!.pattern)))
+    for(const pattern of ['push','pull','squat','hinge','unilateral','trunk','carry']) expect(patterns.has(pattern as never)).toBe(true)
+  })
 })

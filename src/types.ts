@@ -35,6 +35,7 @@ export interface Exercise {
   standard: string
   progression: string
   noEquipment: string
+  perSide?: boolean
 }
 
 export interface WorkoutItem {

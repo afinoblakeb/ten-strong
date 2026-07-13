@@ -23,3 +23,6 @@
 .step,.optional{color:#64716c}
 .preview-row .number,.bottom-nav a{color:#596761}
 .install-nudge{display:flex;gap:13px;align-items:flex-start;margin:24px 0;padding:16px;background:#e4eee9;border-radius:14px}.install-nudge svg{color:var(--accent);flex:none}.install-nudge div{display:grid;gap:3px}.install-nudge span{font-size:.82rem;color:var(--muted);line-height:1.45}
+.minimum-nudge{display:grid;gap:4px;margin-top:14px;padding:13px;background:#f3eadc;border-radius:10px}.minimum-nudge span{font-size:.8rem;color:var(--muted)}
+.photo-reminder{display:grid;gap:4px;margin-bottom:18px;padding:16px;background:#ece7f2;border-radius:13px}.photo-reminder span{font-size:.82rem;color:var(--muted)}
+.storage-warning{width:min(100% - 34px,1040px);margin:16px auto 0;padding:13px 16px;background:#f4dddd;border-left:4px solid var(--danger);border-radius:9px;color:#702f2f}

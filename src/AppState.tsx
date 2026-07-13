@@ -5,6 +5,7 @@ import { formatISODate } from './lib/date'
 
 interface AppStateValue {
   data: AppData
+  storageError: string | null
   updateProfile: (profile: Partial<UserProfile>) => void
   completeOnboarding: (profile: UserProfile) => void
   addSession: (session: SessionLog) => void
@@ -18,14 +19,16 @@ const AppStateContext = createContext<AppStateValue | null>(null)
 
 export function AppStateProvider({ children }: { children: ReactNode }) {
   const [data, setData] = useState<AppData>(() => loadData())
+  const [storageError,setStorageError]=useState<string|null>(null)
 
   useEffect(() => {
-    try { saveData({ ...data, lastOpenedDate:formatISODate(new Date()) }) }
-    catch { /* The current in-memory session remains usable if storage is unavailable. */ }
+    try { saveData({ ...data, lastOpenedDate:formatISODate(new Date()) }); setStorageError(null) }
+    catch { setStorageError('This browser could not save locally. Keep this tab open and export a JSON backup from Settings before closing it.') }
   }, [data])
 
   const value = useMemo<AppStateValue>(() => ({
     data,
+    storageError,
     updateProfile:(profile) => setData((current) => ({ ...current, profile:{ ...current.profile, ...profile } })),
     completeOnboarding:(profile) => setData((current) => ({ ...current, profile:{ ...profile, onboardingComplete:true }, bodyWeights:profile.weightLb ? [{ date:profile.startDate, weightLb:profile.weightLb }] : [] })),
     addSession:(session) => setData((current) => {
@@ -37,7 +40,7 @@ export function AppStateProvider({ children }: { children: ReactNode }) {
     restartChallenge:(startDate) => setData((current) => ({ ...createDefaultData(), profile:{ ...current.profile, startDate, onboardingComplete:true }, bodyWeights:[{ date:startDate, weightLb:current.profile.weightLb }] })),
     replaceData:(next) => setData(next),
     resetData:() => setData(loadData()),
-  }), [data])
+  }), [data,storageError])
   return <AppStateContext.Provider value={value}>{children}</AppStateContext.Provider>
 }
 

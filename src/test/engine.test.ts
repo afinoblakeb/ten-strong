@@ -61,6 +61,17 @@ describe('real challenge adaptation', () => {
     data.sessions=[{id:'s1',day:2,date:'2026-07-02',templateId:'foundation-a',mode:'normal',status:'completed',durationSeconds:600,readiness:base,sets:logs(12,3).map((log)=>({...log,formQuality:'degraded',targetReps:12}))}]
     expect(adaptivePrescription(data,item,15)).toMatchObject({ action:'reduce',variation:'Chair squat' })
   })
+  it('drops to a regression when the only dumbbell was too heavy', () => {
+    const data=createDefaultData(); data.profile.dumbbells=[25]
+    data.sessions=[{id:'heavy',day:2,date:'2026-07-02',templateId:'foundation-a',mode:'normal',status:'partial',durationSeconds:400,readiness:{...base,availableWeight:25},sets:logs(5,0).map((log)=>({...log,weight:25,targetReps:8}))}]
+    expect(adaptivePrescription(data,item,25)).toMatchObject({action:'reduce',weight:null,variation:'Chair squat'})
+  })
+
+  it('compensates when a previously used heavier dumbbell is unavailable', () => {
+    const data=createDefaultData(); data.profile.dumbbells=[10,25]
+    data.sessions=[{id:'travel',day:20,date:'2026-07-20',templateId:'foundation-a',mode:'normal',status:'completed',durationSeconds:600,readiness:{...base,availableWeight:25},sets:logs(10,2).map((log)=>({...log,weight:25,targetReps:12}))}]
+    expect(adaptivePrescription(data,item,10)).toMatchObject({action:'harder-variation',weight:10,variation:'Paused 1½-rep goblet squat'})
+  })
 
   it('repeats the recorded Day 1 setup for the final assessment', () => {
     const data=createDefaultData(); data.assessments=[{id:'a1',date:'2026-07-01',day:1,metric:'clean repetitions',value:10,unit:'reps',exerciseId:'goblet-squat',weight:10,variation:'Goblet squat'}]

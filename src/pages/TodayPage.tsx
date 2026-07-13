@@ -33,6 +33,7 @@ export function TodayPage() {
   const nextPlan = programForDay(Math.min(90,day+1))
   const recentWindow=Math.min(7,day)
   const recentPractice=new Set(data.sessions.filter((session)=>session.day>day-recentWindow&&session.day<=day).map((session)=>session.day)).size
+  const recentMinimums=data.sessions.filter((session)=>session.day>day-7&&session.mode==='minimum').length
 
   function start() { navigate(`/workout/${day}`,{state:{readiness,recommendation}}) }
 
@@ -40,6 +41,7 @@ export function TodayPage() {
     {daysUntilStart>0&&<div className="notice prestart"><strong>Your challenge starts {daysUntilStart===1?'tomorrow':`in ${daysUntilStart} days`}.</strong> Day 1 is ready below. You can preview it now or start early if you choose.</div>}
     <section className="today-hero"><div><div className="eyebrow">Day {day} of 90 · Phase {phase.id}</div><h1>{existing ? (day===90?'You finished Ten Strong.':'Today is in the books.') : template.title}</h1><p>{existing ? (day===90?'Ninety days of useful practice—captured, backed up, and ready to continue.':'You showed up. Tomorrow will meet you where you are.') : template.focus}</p></div><div className="day-orbit" aria-label={`${Math.round(day/90*100)} percent of challenge elapsed`}><strong>{day}</strong><span>/ 90</span></div></section>
     <div className="progress-track"><span style={{width:`${day/90*100}%`}}/></div>
+    {data.profile.photoReminder&&(day===1||day===90)&&!existing&&<aside className="photo-reminder"><strong>Optional progress photo reminder</strong><span>Use the same location, lighting, distance, and relaxed pose. Photos stay in your own camera roll; Ten Strong never accesses them.</span></aside>}
     {existing ? <>
       <section className="card success-card"><CheckCircle2/><div><h2>{existing.status === 'recovery' ? 'Recovery complete' : 'Session complete'}</h2><p>{Math.max(1,Math.round(existing.durationSeconds/60))} minutes · {existing.sets.filter(s=>s.completed).length} sets logged</p></div></section>
       {personalRecords.length>0&&<section className="card pr-card"><Trophy/><div><strong>{personalRecords.length} personal {personalRecords.length===1?'best':'bests'}</strong><p>{[...new Set(personalRecords)].join(' · ')}</p></div></section>}
@@ -57,6 +59,7 @@ export function TodayPage() {
       <fieldset><legend>Pain beyond normal muscle effort?</legend><div className="segmented two">{(['none','present'] as const).map(v=><button type="button" className={readiness.pain===v?'selected':''} onClick={()=>setReadiness({...readiness,pain:v})} key={v}>{v}</button>)}</div></fieldset>
       <fieldset><legend>Time available</legend><div className="segmented two">{([5,10] as const).map(v=><button type="button" className={readiness.minutes===v?'selected':''} onClick={()=>setReadiness({...readiness,minutes:v})} key={v}>{v} minutes</button>)}</div></fieldset>
       <label>Heaviest dumbbell available today<select value={readiness.availableWeight ?? ''} onChange={(e)=>setReadiness({...readiness,availableWeight:e.target.value ? Number(e.target.value):null})}><option value="">No dumbbell / not sure</option>{data.profile.dumbbells.map(w=><option key={w} value={w}>{w} lb</option>)}</select></label>
+      {readiness.minutes===5&&recentMinimums>=2&&<div className="minimum-nudge"><strong>The minimum has protected the habit.</strong><span>If ten minutes is realistic today, the full session will move strength forward more. Five minutes still counts when that is what the day allows.</span></div>}
       <div className={`readiness-result ${recommendation.mode}`}><strong>{recommendation.title}</strong><p>{recommendation.explanation}</p><small>{targetRirForDay(day,recommendation.mode)}</small></div>
       <button className="button primary wide" onClick={start}>{recommendation.mode==='stop'?'View safety guidance':daysUntilStart?'Start Day 1 early':`Start ${recommendation.title}`}</button></section></div>}
   </div>

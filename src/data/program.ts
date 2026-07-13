@@ -53,7 +53,8 @@ export const templates: WorkoutTemplate[] = [
   { id:'intense-b', title:'Heavy enough', focus:'Mechanical tension with available load', kind:'strength', equipment:['dumbbells','chair'], items:[
     { exerciseId:'one-arm-row', sets:2, repMin:8, repMax:12, tempo:'3–2–1', restSeconds:20 },
     { exerciseId:'rdl', sets:2, repMin:8, repMax:12, tempo:'4–1–1', restSeconds:20 },
-    { exerciseId:'oh-press', sets:2, repMin:5, repMax:8, tempo:'2–1–1', restSeconds:15 },
+    { exerciseId:'oh-press', sets:1, repMin:5, repMax:8, tempo:'2–1–1', restSeconds:15 },
+    { exerciseId:'suitcase-carry', sets:1, seconds:30, tempo:'slow walk', restSeconds:10 },
   ]},
   { id:'recovery', title:'Move, breathe, reset', focus:'Recovery and movement quality', kind:'recovery', equipment:['floor or wall'], items:[
     { exerciseId:'recovery-flow', sets:1, seconds:240, tempo:'easy', restSeconds:0, note:'Cycle through cat-cow, wall slides, easy hinges, and marching.' },
