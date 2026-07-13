@@ -1,6 +1,6 @@
 import { describe, expect, it } from 'vitest'
 import { exerciseById, exercises } from '../data/exercises'
-import { bodyweightTemplateFor, fullProgram, phaseForDay, resolveTemplateById, templateById, templates } from '../data/program'
+import { bodyweightTemplateFor, continuationCycle, fullProgram, phaseForDay, programForDay, resolveTemplateById, templateById, templates } from '../data/program'
 
 describe('90-day program', () => {
   it('defines exactly 90 continuous days with valid references', () => {
@@ -30,6 +30,26 @@ describe('90-day program', () => {
     expect(fullProgram[0].templateId).toBe('assessment')
     expect(fullProgram[88].kind).toBe('recovery')
     expect(fullProgram[89].templateId).toBe('final-assessment')
+  })
+
+  it('continues after Day 90 without resetting history or repeating the assessment', () => {
+    expect(programForDay(91)).toMatchObject({day:91,templateId:'recovery',kind:'recovery'})
+    expect(Array.from({length:7},(_,index)=>programForDay(91+index).templateId)).toEqual(continuationCycle)
+    expect(programForDay(98).templateId).toBe('recovery')
+  })
+
+  it('makes every recovery day a structured ten-minute mobility session', () => {
+    const recoveryTemplates=templates.filter((template)=>template.kind==='recovery')
+    expect(recoveryTemplates.length).toBeGreaterThanOrEqual(3)
+    recoveryTemplates.forEach((template)=>{
+      expect(template.items.length).toBeGreaterThanOrEqual(5)
+      expect(template.items.reduce((seconds,item)=>seconds+(item.seconds??0)*item.sets,0)).toBe(600)
+      template.items.forEach((item)=>{
+        expect(item.seconds).toBeGreaterThan(0)
+        expect(exerciseById[item.exerciseId].pattern).toBe('recovery')
+        expect(exerciseById[item.exerciseId].equipment.join(' ')).not.toMatch(/dumbbell|weight/i)
+      })
+    })
   })
 
   it('can resolve every day in a full simulated challenge without a missing exercise', () => {

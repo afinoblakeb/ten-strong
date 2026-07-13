@@ -1,5 +1,16 @@
 # Changelog
 
+## 1.2.0 — 2026-07-12
+
+- Made 600 active seconds a hard requirement for every safely completed day
+- Replaced generic recovery with three structured ten-minute mobility sessions
+- Added a guided mobility remainder when strength work finishes before ten active minutes
+- Added daily and weekly habit-cue reinforcement plus an optional iPhone calendar cue
+- Capped training intensity by qualified completed exposure rather than calendar phase alone
+- Made progress comparisons load-, variation-, metric-, and tempo-aware
+- Added persisted safety stops and a history-preserving Day 91+ continuation rhythm
+- Simplified in-workout logging while preserving optional detailed controls
+
 ## 1.1.0 — 2026-07-12
 
 - Added an explicit daily dumbbell availability check

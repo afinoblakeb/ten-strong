@@ -4,14 +4,17 @@ import { exerciseById } from '../data/exercises'
 import type { AppData, Readiness, Recommendation, SessionLog, SetLog, WorkoutItem } from '../types'
 
 export function getChallengeDay(startDate: string, now = new Date()): number {
+  return Math.min(90,getProgramDay(startDate,now))
+}
+
+export function getProgramDay(startDate: string, now = new Date()): number {
   if (!startDate) return 1
-  return Math.min(90, Math.max(1, differenceInCalendarDays(now, parseLocalDate(startDate)) + 1))
+  return Math.max(1, differenceInCalendarDays(now, parseLocalDate(startDate)) + 1)
 }
 
 export function recommendationFor(readiness: Readiness, plannedKind: 'strength' | 'recovery' | 'assessment'): Recommendation {
   if (readiness.pain === 'present') return { mode:'stop', title:'Pause today', explanation:'Pain was reported. Do not train through sharp, sudden, worsening, or unexplained symptoms. Seek appropriate professional guidance when symptoms are concerning.', setMultiplier:0 }
-  if (plannedKind === 'recovery' || readiness.soreness === 'significant') return { mode:'recovery', title:'Recovery session', explanation:readiness.soreness === 'significant' ? 'Significant soreness shifts today to easy movement so you can recover without punishment.' : 'This planned lower-load day supports the next strength session.', setMultiplier:0.5 }
-  if (readiness.minutes === 5) return { mode:'minimum', title:'Five-minute minimum', explanation:'Time is tight, so today uses one concise round. This preserves the habit without turning tomorrow into a catch-up session.', setMultiplier:0.5 }
+  if (plannedKind === 'recovery' || readiness.soreness === 'significant') return { mode:'recovery', title:'Ten-minute mobility', explanation:readiness.soreness === 'significant' ? 'Significant soreness shifts today to ten minutes of easy, comfortable mobility—never forced stretching.' : 'This planned mobility day builds the daily movement habit while supporting the next strength session.', setMultiplier:0.5 }
   if (readiness.energy === 'low' || readiness.soreness === 'mild') return { mode:'reduced', title:'Reduced-volume session', explanation:`${readiness.energy === 'low' ? 'Energy is low' : 'Soreness is mild'}, so one working set is removed where possible. Keep technique crisp.`, setMultiplier:0.67 }
   return { mode:'normal', title:'Normal session', explanation:'Readiness supports the planned session. Finish most sets with 1–3 good repetitions still possible.', setMultiplier:1 }
 }
@@ -29,6 +32,40 @@ export function recommendationForDay(data: AppData, day: number, readiness: Read
 export function adjustedSetCount(item: WorkoutItem, recommendation: Recommendation): number {
   if (recommendation.mode === 'stop') return 0
   return Math.max(1, Math.round(item.sets * recommendation.setMultiplier))
+}
+
+const templateTierMap: Record<string,[string,string,string,string]> = {
+  'foundation-a':['foundation-a','foundation-a','foundation-a','foundation-a'],
+  'foundation-b':['foundation-b','foundation-b','foundation-b','foundation-b'],
+  'unilateral':['unilateral','unilateral','unilateral','unilateral'],
+  'density':['foundation-a','density','density','density'],
+  'strength-a':['foundation-a','foundation-a','strength-a','strength-a'],
+  'strength-b':['foundation-b','foundation-b','strength-b','strength-b'],
+  'intense-a':['foundation-a','density','strength-a','intense-a'],
+  'intense-b':['foundation-b','foundation-b','strength-b','intense-b'],
+}
+
+export interface TrainingTemplateDecision { templateId:string; plannedTemplateId:string; tier:1|2|3|4; strengthPractices:number; explanation:string | null }
+
+function isQualifiedStrengthPractice(session:SessionLog): boolean {
+  if(resolveTemplateById(session.templateId)?.kind!=='strength'||!['normal','reduced'].includes(session.mode)||(session.activitySeconds??session.durationSeconds)<600)return false
+  const completed=session.sets.filter((set)=>set.completed&&exerciseById[set.exerciseId]?.pattern!=='recovery')
+  const patterns=new Set(completed.map((set)=>exerciseById[set.exerciseId]?.pattern).filter(Boolean))
+  return patterns.size>=2&&completed.every((set)=>!set.discomfort&&set.formQuality!=='degraded'&&set.rir>0)
+}
+
+export function trainingTemplateForDay(data: AppData, day: number): TrainingTemplateDecision {
+  const plan=programForDay(day)
+  const planned=templateById[plan.templateId]
+  if (planned.kind!=='strength') return {templateId:planned.id,plannedTemplateId:planned.id,tier:Math.min(4,plan.phaseId) as 1|2|3|4,strengthPractices:0,explanation:null}
+  const strengthPractices=data.sessions.filter((session)=>session.day<day&&isQualifiedStrengthPractice(session)).length
+  let earnedTier:1|2|3|4=strengthPractices>=28?4:strengthPractices>=14?3:strengthPractices>=5?2:1
+  if(missedDaysBefore(data,day)>=7&&earnedTier>1) earnedTier=(earnedTier-1) as 1|2|3
+  const plannedTier=Math.min(4,plan.phaseId) as 1|2|3|4
+  const tier=Math.min(plannedTier,earnedTier) as 1|2|3|4
+  const templateId=templateTierMap[planned.id]?.[tier-1]??planned.id
+  const explanation=templateId===planned.id?null:`The calendar is in Phase ${plan.phaseId}, but your training level stays at Tier ${tier} until more clean strength practices are logged. Today uses ${templateById[templateId].title} instead of jumping ahead.`
+  return {templateId,plannedTemplateId:planned.id,tier,strengthPractices,explanation}
 }
 
 export interface ProgressionResult { action:'increase-weight'|'increase-reps'|'harder-variation'|'repeat'|'reduce'; nextTarget: number; explanation:string }
@@ -71,13 +108,22 @@ function exerciseExposures(data: AppData, exerciseId: string): Array<{ session: 
 
 function qualifiesForProgression(logs: SetLog[], item: WorkoutItem): boolean {
   const completed = logs.filter((log) => log.completed)
-  if (!completed.length || completed.length < Math.min(item.sets, logs.length)) return false
+  if (!completed.length || completed.length < item.sets || logs.some((log)=>!log.completed)) return false
   return completed.every((log) => !log.discomfort && log.formQuality !== 'degraded' && log.rir >= 2 && (log.reps ?? log.seconds ?? 0) >= (log.targetReps ?? log.targetSeconds ?? item.repMax ?? item.seconds ?? 0))
+}
+
+function exposureSignature(logs:SetLog[]): string {
+  const completed=logs.filter((log)=>log.completed)
+  const weight=Math.max(0,...completed.map((log)=>log.weight??0))
+  const variation=completed.find((log)=>log.variation)?.variation??''
+  const tempo=completed.find((log)=>log.tempo)?.tempo??''
+  return `${weight}|${variation}|${tempo}`
 }
 
 export function adaptivePrescription(data: AppData, item: WorkoutItem, maximumAvailableWeight: number | null, assessmentMode?: 'baseline' | 'final', hasDumbbells = true): AdaptivePrescription {
   const exercise = exerciseById[item.exerciseId]
   if (item.exerciseId==='strength-primer') return { seconds:item.seconds,weight:null,variation:exercise.standard,tempo:item.tempo,action:'start',explanation:'Use this minute to rehearse the first movements, confirm your support is stable, and choose a comfortable range.' }
+  if (exercise.pattern==='recovery') return {repMin:item.repMin,repMax:item.repMax,seconds:item.seconds,weight:null,variation:exercise.standard,tempo:item.tempo,action:'start',explanation:'Keep this restorative: use a comfortable range, steady breathing, and an effort that leaves you feeling the same or better.'}
   if (assessmentMode === 'baseline') { const needsSubstitute=(!data.profile.hasSturdyChair&&exercise.equipment.some((equipment)=>/chair|couch|counter/.test(equipment)))||(!hasDumbbells&&exercise.equipment.some((equipment)=>equipment.includes('dumbbell'))); return { repMin:item.repMin, repMax:item.repMax, seconds:item.seconds, weight:needsSubstitute?null:data.profile.dumbbells.filter((weight) => maximumAvailableWeight!==null&&weight <= maximumAvailableWeight).sort((a,b)=>a-b)[0] ?? maximumAvailableWeight, variation:needsSubstitute?exercise.noEquipment:exercise.standard, tempo:item.tempo, action:'start', explanation:'Record a conservative, repeatable starting point. Stop with about 3 technically clean reps still possible.' } }
   if (assessmentMode === 'final') {
     const baseline=data.assessments.find((result) => result.day===1 && result.exerciseId===item.exerciseId)
@@ -109,7 +155,9 @@ export function adaptivePrescription(data: AppData, item: WorkoutItem, maximumAv
     const lighter = [...availableWeights].reverse().find((weight) => weight < lastWeight) ?? null
     return { repMin:item.repMin, repMax:item.repMin, seconds:item.seconds, weight:lighter, variation:exercise.regression, tempo:item.tempo, action:'reduce', explanation:`The last exposure missed the lower target, reached failure, or was incomplete. Today uses ${exercise.regression}${lighter?` at ${lighter} lb`:' without added load'} and does not add work.` }
   }
-  const twoQualified = exposures.slice(0,2).length === 2 && exposures.slice(0,2).every((exposure) => qualifiesForProgression(exposure.logs,exposure.item))
+  const latestSignature=exposureSignature(latest.logs)
+  const progressionExposures=exposures.filter((exposure)=>exposure.session.mode==='normal'&&resolveTemplateById(exposure.session.templateId)?.kind==='strength'&&exposureSignature(exposure.logs)===latestSignature)
+  const twoQualified = latest.session.mode==='normal' && progressionExposures.slice(0,2).length === 2 && progressionExposures.slice(0,2).every((exposure) => qualifiesForProgression(exposure.logs,exposure.item))
   if (twoQualified) {
     const heavier = availableWeights.find((weight) => weight > lastWeight)
     if (heavier) return { repMin:item.repMin, repMax:item.repMin, seconds:item.seconds, weight:heavier, variation:lastVariation ?? exercise.standard, tempo:item.tempo, action:'increase-weight', explanation:`Two clean exposures reached the top of the range with at least 2 reps in reserve. Move to ${heavier} lb and return to the lower target.` }
@@ -126,6 +174,7 @@ export function adaptivePrescription(data: AppData, item: WorkoutItem, maximumAv
 export function targetRirForDay(day: number, mode: Recommendation['mode']): string {
   if (mode === 'recovery') return 'Easy · at least 4 reps in reserve'
   if (mode === 'reduced' || day <= 14) return 'Easy–moderate · 3–4 reps in reserve'
+  if (day > 90) return 'Moderate–hard · 1–3 reps in reserve'
   if (day <= 35) return 'Moderate · 2–3 reps in reserve'
   if (day <= 63) return 'Moderate–hard · 1–3 reps in reserve'
   if (day <= 84) return 'Hard but clean · 1–2 reps in reserve'
@@ -136,8 +185,20 @@ export function previousExerciseLogs(data: AppData, exerciseId: string): SetLog[
   return [...data.sessions].reverse().find((session) => session.sets.some((set) => set.exerciseId === exerciseId))?.sets.filter((set) => set.exerciseId === exerciseId) ?? []
 }
 
+export function setComparisonKey(set:Pick<SetLog,'exerciseId'|'weight'|'variation'|'tempo'|'reps'|'seconds'>): string {
+  return [set.exerciseId,set.reps!==undefined?'reps':'seconds',set.weight??0,set.variation??'',set.tempo??''].join('|')
+}
+
+export function activeSecondsForSet(input:{completed:boolean;reps?:number;seconds?:number;tempo:string;perSide?:boolean}):number {
+  if(!input.completed)return 0
+  const sideMultiplier=input.perSide?2:1
+  if(input.seconds!==undefined)return Math.max(0,input.seconds)*sideMultiplier
+  const tempoSeconds=(input.tempo.match(/[0-9]+/g)??[]).reduce((sum,value)=>sum+Number(value),0)||2
+  return Math.max(0,input.reps??0)*tempoSeconds*sideMultiplier
+}
+
 export function sessionStatus(sets: SetLog[], mode: string): SessionLog['status'] {
-  if (mode === 'recovery') return 'recovery'
+  if (mode === 'recovery' && sets.length > 0 && sets.every((set)=>set.completed)) return 'recovery'
   if (sets.length > 0 && sets.every((set) => set.completed)) return 'completed'
   return 'partial'
 }
@@ -145,12 +206,14 @@ export function sessionStatus(sets: SetLog[], mode: string): SessionLog['status'
 export function consistencyRate(data: AppData, today = new Date()): number {
   if (!data.profile.onboardingComplete) return 0
   const elapsed = getChallengeDay(data.profile.startDate, today)
-  const completedDays = new Set(data.sessions.filter((session) => ['completed','partial','recovery'].includes(session.status)).map((session) => session.day)).size
-  return Math.round((completedDays / elapsed) * 100)
+  const completedDays = new Set(data.sessions.filter((session) => session.day<=elapsed&&(session.activitySeconds??session.durationSeconds)>=600&&['completed','partial','recovery'].includes(session.status)).map((session) => session.day)).size
+  const safetyDays=new Set(data.sessions.filter((session)=>session.status==='safety'&&session.day<=elapsed).map((session)=>session.day)).size
+  const eligibleDays=Math.max(0,elapsed-safetyDays)
+  return eligibleDays===0?100:Math.round((completedDays / eligibleDays) * 100)
 }
 
 export function totalMinutes(data: AppData): number {
-  return Math.round(data.sessions.reduce((sum, session) => sum + session.durationSeconds, 0) / 60)
+  return Math.round(data.sessions.reduce((sum, session) => sum + (session.activitySeconds??session.durationSeconds), 0) / 60)
 }
 
 export function missedDaysBefore(data: AppData, day: number): number {
@@ -169,5 +232,5 @@ export function reentryNote(data: AppData, day: number): string | null {
 
 export function buildSessionId(day: number): string { return `${formatISODate(new Date())}-d${day}-${Date.now()}` }
 
-export function todayPlan(data: AppData, now = new Date()) { const day = getChallengeDay(data.profile.startDate, now); return programForDay(day) }
+export function todayPlan(data: AppData, now = new Date()) { const day = getProgramDay(data.profile.startDate, now); return programForDay(day) }
 export function templateForMode(templateId: string, mode: Recommendation['mode']) { return templateById[mode === 'minimum' ? 'minimum' : mode === 'recovery' ? 'recovery' : templateId] }

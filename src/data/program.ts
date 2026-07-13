@@ -57,11 +57,28 @@ export const templates: WorkoutTemplate[] = [
     { exerciseId:'oh-press', sets:1, repMin:5, repMax:8, tempo:'2–1–1', restSeconds:15 },
     { exerciseId:'suitcase-carry', sets:1, seconds:30, tempo:'slow walk', restSeconds:10 },
   ]},
-  { id:'recovery', title:'Move, breathe, reset', focus:'Recovery and movement quality', kind:'recovery', equipment:['floor or wall'], items:[
-    { exerciseId:'recovery-flow', sets:1, seconds:240, tempo:'easy', restSeconds:0, note:'Cycle through cat-cow, wall slides, easy hinges, and marching.' },
-    { exerciseId:'calf-raise', sets:1, repMin:8, repMax:15, tempo:'2–1–2', restSeconds:0 },
+  { id:'recovery', title:'Ten-minute reset', focus:'Whole-body mobility and easy movement', kind:'recovery', equipment:['floor','wall'], items:[
+    { exerciseId:'breathing-march', sets:1, seconds:120, tempo:'easy', restSeconds:0 },
+    { exerciseId:'cat-cow-flow', sets:1, seconds:120, tempo:'slow', restSeconds:0 },
+    { exerciseId:'wall-slide-flow', sets:1, seconds:120, tempo:'controlled', restSeconds:0 },
+    { exerciseId:'hip-switch-flow', sets:1, seconds:120, tempo:'easy', restSeconds:0 },
+    { exerciseId:'supported-squat-flow', sets:1, seconds:120, tempo:'slow', restSeconds:0 },
   ]},
-  { id:'minimum', title:'Five-minute minimum', focus:'Keep the cue; earn a useful stimulus', kind:'strength', equipment:['one dumbbell optional','chair or wall'], items:[
+  { id:'mobility-hips', title:'Hips, ankles + spine', focus:'Restore lower-body range and control', kind:'recovery', equipment:['floor','wall'], items:[
+    { exerciseId:'cat-cow-flow', sets:1, seconds:120, tempo:'slow', restSeconds:0 },
+    { exerciseId:'hip-switch-flow', sets:1, seconds:120, tempo:'easy', restSeconds:0 },
+    { exerciseId:'hip-flexor-reach', sets:1, seconds:120, tempo:'slow', restSeconds:0 },
+    { exerciseId:'ankle-rock-flow', sets:1, seconds:120, tempo:'controlled', restSeconds:0 },
+    { exerciseId:'supported-squat-flow', sets:1, seconds:120, tempo:'slow', restSeconds:0 },
+  ]},
+  { id:'mobility-upper', title:'Shoulders, trunk + posture', focus:'Restore upper-body motion and breathing', kind:'recovery', equipment:['floor','wall'], items:[
+    { exerciseId:'breathing-march', sets:1, seconds:120, tempo:'easy', restSeconds:0 },
+    { exerciseId:'wall-slide-flow', sets:1, seconds:120, tempo:'controlled', restSeconds:0 },
+    { exerciseId:'open-book-flow', sets:1, seconds:120, tempo:'slow', restSeconds:0 },
+    { exerciseId:'dead-bug-breathing', sets:1, seconds:120, tempo:'easy control', restSeconds:0 },
+    { exerciseId:'hinge-reach-flow', sets:1, seconds:120, tempo:'slow', restSeconds:0 },
+  ]},
+  { id:'minimum', title:'Ten-minute continuity', focus:'A concise strength round followed by easy mobility', kind:'strength', equipment:['one dumbbell optional','chair or wall'], items:[
     { exerciseId:'incline-pushup', sets:1, repMin:6, repMax:12, tempo:'2–1–1', restSeconds:10 },
     { exerciseId:'split-squat', sets:1, repMin:6, repMax:10, tempo:'2–1–1', restSeconds:10 },
     { exerciseId:'one-arm-row', sets:1, repMin:8, repMax:12, tempo:'2–1–2', restSeconds:10 },
@@ -96,6 +113,16 @@ const bodyweightExerciseMap: Record<string,string> = {
   'suitcase-carry':'tall-march',
   'calf-raise':'calf-raise',
   'recovery-flow':'recovery-flow',
+  'breathing-march':'breathing-march',
+  'cat-cow-flow':'cat-cow-flow',
+  'wall-slide-flow':'wall-slide-flow',
+  'hip-switch-flow':'hip-switch-flow',
+  'supported-squat-flow':'supported-squat-flow',
+  'hip-flexor-reach':'hip-flexor-reach',
+  'ankle-rock-flow':'ankle-rock-flow',
+  'open-book-flow':'open-book-flow',
+  'hinge-reach-flow':'hinge-reach-flow',
+  'dead-bug-breathing':'dead-bug-breathing',
 }
 
 const bodyweightPatternOrder = { push:0, squat:1, unilateral:1, pull:2, hinge:3, trunk:4, carry:5, recovery:6 }
@@ -118,19 +145,26 @@ export function resolveTemplateById(id: string): WorkoutTemplate | undefined {
 }
 
 const phaseCycle: Record<number, string[]> = {
-  1: ['foundation-a','recovery','foundation-b','recovery','unilateral','recovery','foundation-a'],
-  2: ['foundation-a','foundation-b','recovery','unilateral','density','recovery','foundation-b'],
-  3: ['strength-a','strength-b','recovery','unilateral','strength-a','density','recovery'],
-  4: ['intense-a','intense-b','recovery','strength-a','intense-b','density','recovery'],
-  5: ['foundation-a','recovery','foundation-b','recovery','recovery','recovery'],
+  1: ['foundation-a','mobility-hips','foundation-b','mobility-upper','unilateral','recovery','foundation-a'],
+  2: ['foundation-a','foundation-b','mobility-hips','unilateral','density','mobility-upper','foundation-b'],
+  3: ['strength-a','strength-b','mobility-upper','unilateral','strength-a','density','mobility-hips'],
+  4: ['intense-a','intense-b','mobility-hips','strength-a','intense-b','density','mobility-upper'],
+  5: ['foundation-a','mobility-upper','foundation-b','mobility-hips','recovery','recovery'],
 }
+
+export const continuationCycle = ['recovery','foundation-a','mobility-hips','foundation-b','mobility-upper','unilateral','density']
 
 export function phaseForDay(day: number): Phase {
   return phases.find((phase) => day >= phase.start && day <= phase.end) ?? phases[phases.length - 1]
 }
 
 export function programForDay(day: number): ProgramDay {
-  const safeDay = Math.min(90, Math.max(1, day))
+  const safeDay = Math.max(1, day)
+  if (safeDay > 90) {
+    const templateId=continuationCycle[(safeDay-91)%continuationCycle.length]
+    const template=templateById[templateId]
+    return {day:safeDay,phaseId:5,templateId,kind:template.kind,title:template.title}
+  }
   if (safeDay === 1) return { day:1, phaseId:1, templateId:'assessment', kind:'assessment', title:'Starting point' }
   if (safeDay === 89) return { day:89, phaseId:5, templateId:'recovery', kind:'recovery', title:'Recover & prepare' }
   if (safeDay === 90) return { day:90, phaseId:5, templateId:'final-assessment', kind:'assessment', title:'Final assessment' }

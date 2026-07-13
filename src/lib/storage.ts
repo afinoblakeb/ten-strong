@@ -5,14 +5,14 @@ import { formatISODate } from './date'
 const STORAGE_KEY = 'ten-strong-data-v1'
 
 const readinessSchema = z.object({ energy:z.enum(['low','normal','high']), soreness:z.enum(['none','mild','significant']), pain:z.enum(['none','present']), hasDumbbells:z.boolean().default(true), availableWeight:z.number().nullable(), minutes:z.union([z.literal(5),z.literal(10)]) })
-const setSchema = z.object({ id:z.string(), exerciseId:z.string(), setNumber:z.number(), reps:z.number().optional(), seconds:z.number().optional(), weight:z.number().optional(), rir:z.number().min(0).max(4), formQuality:z.enum(['good','degraded']).optional(), variation:z.string().optional(), targetReps:z.number().optional(), targetSeconds:z.number().optional(), tempo:z.string().optional(), discomfort:z.boolean().optional(), note:z.string().optional(), completed:z.boolean() })
-const sessionSchema = z.object({ id:z.string(), day:z.number().min(1).max(90), date:z.string(), templateId:z.string(), mode:z.enum(['normal','reduced','recovery','minimum','stop']), status:z.enum(['completed','partial','recovery','missed']), durationSeconds:z.number().nonnegative(), readiness:readinessSchema, recommendationExplanation:z.string().optional(), sets:z.array(setSchema), note:z.string().optional() })
+const setSchema = z.object({ id:z.string(), exerciseId:z.string(), setNumber:z.number(), reps:z.number().optional(), seconds:z.number().optional(), weight:z.number().optional(), rir:z.number().min(0).max(4), formQuality:z.enum(['good','degraded']).optional(), variation:z.string().optional(), targetReps:z.number().optional(), targetSeconds:z.number().optional(), tempo:z.string().optional(), discomfort:z.boolean().optional(), mobilityComfort:z.enum(['comfortable','limited']).optional(), note:z.string().optional(), completed:z.boolean() })
+const sessionSchema = z.object({ id:z.string(), day:z.number().min(1), date:z.string(), templateId:z.string(), mode:z.enum(['normal','reduced','recovery','minimum','stop']), status:z.enum(['completed','partial','recovery','safety','missed']), durationSeconds:z.number().nonnegative(), activitySeconds:z.number().nonnegative().optional(), readiness:readinessSchema, recommendationExplanation:z.string().optional(), sets:z.array(setSchema), note:z.string().optional() })
 
 export const appDataSchema = z.object({
   version:z.literal(1),
   profile:z.object({ label:z.string(), ageRange:z.string(), height:z.string(), weightLb:z.number().positive(), trainingHistory:z.string(), activityLevel:z.string(), dumbbells:z.array(z.number().positive()), limitations:z.string(), preferredTime:z.string(), habitAnchor:z.string().default('After I get ready'), hasSturdyChair:z.boolean().default(true), startDate:z.string(), photoReminder:z.boolean(), onboardingComplete:z.boolean() }),
   sessions:z.array(sessionSchema),
-  assessments:z.array(z.object({ id:z.string(), date:z.string(), day:z.number(), metric:z.string(), value:z.number(), unit:z.string(), exerciseId:z.string().optional(), weight:z.number().optional(), variation:z.string().optional() })),
+  assessments:z.array(z.object({ id:z.string(), date:z.string(), day:z.number(), metric:z.string(), value:z.number(), unit:z.string(), exerciseId:z.string().optional(), weight:z.number().optional(), variation:z.string().optional(), tempo:z.string().optional() })),
   bodyWeights:z.array(z.object({ date:z.string(), weightLb:z.number().positive() })),
   lastOpenedDate:z.string(),
 })
@@ -39,21 +39,31 @@ export function parseImport(raw: string): AppData {
 }
 
 export function downloadFile(name: string, content: string, type: string) {
-  const blob = new Blob([content], { type }); const url = URL.createObjectURL(blob); const anchor = document.createElement('a'); anchor.href=url; anchor.download=name; anchor.click(); URL.revokeObjectURL(url)
+  const blob = new Blob([content], { type }); const url = URL.createObjectURL(blob); const anchor = document.createElement('a'); anchor.href=url; anchor.download=name; document.body.append(anchor); anchor.click(); anchor.remove(); window.setTimeout(()=>URL.revokeObjectURL(url),1000)
+}
+
+function escapeIcs(value:string):string{return value.replaceAll('\\','\\\\').replaceAll('\n','\\n').replaceAll(',','\\,').replaceAll(';','\\;')}
+
+export function habitReminderToIcs(data:AppData):string {
+  const timeByPreference:Record<string,string>={Morning:'080000',Midday:'120000',Evening:'180000',Flexible:'090000'}
+  const date=data.profile.startDate.replaceAll('-','')
+  const time=timeByPreference[data.profile.preferredTime]??'080000'
+  const cue=data.profile.habitAnchor.trim()||'Open Ten Strong'
+  return ['BEGIN:VCALENDAR','VERSION:2.0','PRODID:-//Ten Strong//Daily Practice//EN','CALSCALE:GREGORIAN','BEGIN:VEVENT',`UID:ten-strong-${date}@local`,`DTSTART:${date}T${time}`,'RRULE:FREQ=DAILY',`SUMMARY:${escapeIcs('Ten Strong — 10 active minutes')}`,`DESCRIPTION:${escapeIcs(`${cue} → open Ten Strong`)}`,'END:VEVENT','END:VCALENDAR',''].join('\r\n')
 }
 
 export function sessionsToCsv(data: AppData): string {
-  const rows = [['date','challenge_day','status','workout','minutes','exercise','set','reps','seconds','weight_lb','rir','discomfort']]
-  data.sessions.forEach((session) => session.sets.forEach((set) => rows.push([session.date,String(session.day),session.status,session.templateId,(session.durationSeconds/60).toFixed(1),set.exerciseId,String(set.setNumber),String(set.reps ?? ''),String(set.seconds ?? ''),String(set.weight ?? ''),String(set.rir),String(Boolean(set.discomfort))])))
+  const rows = [['date','challenge_day','status','workout','active_minutes','elapsed_minutes','exercise','set','reps','seconds','weight_lb','rir','discomfort','mobility_comfort']]
+  data.sessions.forEach((session) => {const prefix=[session.date,String(session.day),session.status,session.templateId,((session.activitySeconds??session.durationSeconds)/60).toFixed(1),(session.durationSeconds/60).toFixed(1)];if(!session.sets.length)rows.push([...prefix,'','','','','','','','']);else session.sets.forEach((set)=>rows.push([...prefix,set.exerciseId,String(set.setNumber),String(set.reps??''),String(set.seconds??''),String(set.weight??''),String(set.rir),String(Boolean(set.discomfort)),String(set.mobilityComfort??'')]))})
   return rows.map((row) => row.map((cell) => `"${cell.replaceAll('"','""')}"`).join(',')).join('\n')
 }
 
 function escapeHtml(value: string | number): string { return String(value).replace(/[&<>"']/g,(character)=>({ '&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#039;' })[character]!) }
 
 export function summaryToHtml(data: AppData): string {
-  const completed=data.sessions.filter((session)=>['completed','recovery'].includes(session.status)).length
-  const minutes=Math.round(data.sessions.reduce((sum,session)=>sum+session.durationSeconds,0)/60)
-  const sessionRows=[...data.sessions].sort((a,b)=>a.day-b.day).map((session)=>`<tr><td>${session.day}</td><td>${escapeHtml(session.date)}</td><td>${escapeHtml(session.status)}</td><td>${escapeHtml(session.templateId)}</td><td>${Math.max(1,Math.round(session.durationSeconds/60))}</td></tr>`).join('')
+  const completed=data.sessions.filter((session)=>(session.activitySeconds??session.durationSeconds)>=600&&['completed','partial','recovery'].includes(session.status)).length
+  const minutes=Math.round(data.sessions.reduce((sum,session)=>sum+(session.activitySeconds??session.durationSeconds),0)/60)
+  const sessionRows=[...data.sessions].sort((a,b)=>a.day-b.day).map((session)=>`<tr><td>${session.day}</td><td>${escapeHtml(session.date)}</td><td>${escapeHtml(session.status)}</td><td>${escapeHtml(session.templateId)}</td><td>${Math.round((session.activitySeconds??session.durationSeconds)/60)}</td></tr>`).join('')
   const assessmentRows=data.assessments.map((result)=>`<tr><td>${result.day}</td><td>${escapeHtml(result.exerciseId??result.metric)}</td><td>${result.value} ${escapeHtml(result.unit)}</td><td>${result.weight?`${result.weight} lb`:''}</td><td>${escapeHtml(result.variation??'')}</td></tr>`).join('')
-  return `<!doctype html><html lang="en"><meta charset="utf-8"><meta name="viewport" content="width=device-width"><title>Ten Strong summary</title><style>body{font:16px system-ui;max-width:850px;margin:40px auto;padding:0 20px;color:#17221f}h1{font-size:42px}h2{margin-top:38px}table{width:100%;border-collapse:collapse}th,td{text-align:left;padding:9px;border-bottom:1px solid #ddd}.metrics{display:flex;gap:30px}.metrics strong{display:block;font-size:28px}@media print{body{margin:0}}</style><h1>Ten Strong</h1><p>${escapeHtml(data.profile.label)} · Started ${escapeHtml(data.profile.startDate)}</p><div class="metrics"><div><strong>${completed}</strong>days completed</div><div><strong>${minutes}</strong>training minutes</div><div><strong>${data.sessions.length}</strong>days practiced</div></div><h2>Assessments</h2><table><thead><tr><th>Day</th><th>Exercise</th><th>Result</th><th>Load</th><th>Version</th></tr></thead><tbody>${assessmentRows||'<tr><td colspan="5">No assessments logged yet.</td></tr>'}</tbody></table><h2>Session history</h2><table><thead><tr><th>Day</th><th>Date</th><th>Status</th><th>Workout</th><th>Minutes</th></tr></thead><tbody>${sessionRows||'<tr><td colspan="5">No sessions logged yet.</td></tr>'}</tbody></table><p><small>Generated locally by Ten Strong. This file contains personal workout data.</small></p></html>`
+  return `<!doctype html><html lang="en"><meta charset="utf-8"><meta name="viewport" content="width=device-width"><title>Ten Strong summary</title><style>body{font:16px system-ui;max-width:850px;margin:40px auto;padding:0 20px;color:#17221f}h1{font-size:42px}h2{margin-top:38px}table{width:100%;border-collapse:collapse}th,td{text-align:left;padding:9px;border-bottom:1px solid #ddd}.metrics{display:flex;gap:30px}.metrics strong{display:block;font-size:28px}@media print{body{margin:0}}</style><h1>Ten Strong</h1><p>${escapeHtml(data.profile.label)} · Started ${escapeHtml(data.profile.startDate)}</p><div class="metrics"><div><strong>${completed}</strong>days completed</div><div><strong>${minutes}</strong>active minutes</div><div><strong>${data.sessions.length}</strong>days recorded</div></div><h2>Assessments</h2><table><thead><tr><th>Day</th><th>Exercise</th><th>Result</th><th>Load</th><th>Version</th></tr></thead><tbody>${assessmentRows||'<tr><td colspan="5">No assessments logged yet.</td></tr>'}</tbody></table><h2>Session history</h2><table><thead><tr><th>Day</th><th>Date</th><th>Status</th><th>Workout</th><th>Active minutes</th></tr></thead><tbody>${sessionRows||'<tr><td colspan="5">No sessions logged yet.</td></tr>'}</tbody></table><p><small>Generated locally by Ten Strong. This file contains personal workout data.</small></p></html>`
 }

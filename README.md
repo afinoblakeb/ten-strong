@@ -4,7 +4,7 @@
 
 **Live app:** [https://afinoblakeb.github.io/ten-strong/](https://afinoblakeb.github.io/ten-strong/)
 
-Ten Strong is a finished, mobile-first progressive web app for a detrained adult returning to strength training at home. It combines a complete 90-day program with a transparent rules-based progression engine, readiness adjustments, exercise substitutions, local workout logging, progress views, and offline support.
+Ten Strong is a finished, mobile-first progressive web app for a detrained adult returning to strength training at home. It combines a complete 90-day program, an ongoing continuation rhythm, structured mobility, a transparent rules-based progression engine, readiness adjustments, local workout logging, and offline support.
 
 No account, backend, analytics, paid API, or remote database is required. Personal data remains in the browser unless the user exports it.
 
@@ -13,10 +13,12 @@ No account, backend, analytics, paid API, or remote database is required. Person
 ## What is included
 
 - Five-phase, 90-day strength plan with every day defined
-- 8–12 minute normal sessions and a dedicated five-minute fallback
+- A real ten-active-minute daily contract, with guided mobility filling any unused strength time
 - Day 1 baseline and Day 90 comparable final assessment
-- Pain-first readiness logic, recovery days, and missed-day re-entry guidance
+- Pain-first readiness logic, persisted safety stops, mobility days, and missed-day re-entry guidance
 - Daily dumbbell yes/no check with a dedicated travel-ready bodyweight queue
+- Three distinct ten-minute mobility sessions and a sustainable Day 91+ continuation week
+- Daily habit-anchor reinforcement, weekly cue review, and an optional recurring iPhone calendar cue
 - Push, pull, squat, hinge, unilateral leg, trunk, overhead, and carry coverage
 - Editable exercise library with cues, common mistakes, regressions, progressions, no-equipment alternatives, and stop conditions
 - Transparent progression through load, reps, range, tempo, pauses, leverage, and unilateral work
@@ -111,12 +113,15 @@ The calendar is tied to local dates. Missing a day does not shift the program or
 Readiness decisions follow a fixed order:
 
 1. Pain beyond normal muscular effort blocks the workout and shows calm stop guidance.
-2. Significant soreness or a scheduled recovery day produces a recovery session.
-3. Five available minutes uses the dedicated minimum session.
-4. Low energy or mild soreness removes working volume.
-5. Otherwise the planned session proceeds normally.
+2. Significant soreness or a scheduled mobility day produces a ten-minute mobility session.
+3. Low energy or mild soreness removes working volume; easy mobility fills the remainder of the ten active minutes.
+4. Otherwise the planned session proceeds normally.
 
-Equipment is confirmed separately every day. Choosing **Yes, I have them** keeps the planned dumbbell queue and its progression. Choosing **No dumbbells** swaps that day to movement-matched bodyweight exercises, reorganizes them into a low-setup circuit, and logs the workout under a separate bodyweight template. The loaded queue is not consumed or advanced, so it is ready when dumbbells return. The five-minute and recovery decisions still take priority when needed.
+Equipment is confirmed separately every day. Choosing **Yes, I have them** keeps the planned dumbbell queue and its progression. Choosing **No dumbbells** swaps that day to movement-matched bodyweight exercises, reorganizes them into a low-setup circuit, and logs the workout under a separate bodyweight template. The loaded queue is not consumed or advanced, so it is ready when dumbbells return.
+
+Completion requires 600 seconds of active practice—not merely leaving the workout screen open. Timed movements use their actual timer; repetition work estimates active seconds from completed reps and prescribed tempo. If the primary queue finishes early, a guided easy-mobility timer fills the exact remainder. Reading and logging time do not reduce that block. Concerning pain is the safety exception: it stops training and can be logged without penalty or make-up work.
+
+Calendar phases still advance with real dates, but intensity does not advance on dates alone. The app caps the training tier until enough ten-minute, symptom-free, multi-pattern strength practices have actually been completed. After Day 90, **Continue Strong** begins automatically with four strength practices and three mobility days per week while preserving all history and progression.
 
 Progression is equally explicit. When all prescribed work reaches the top of its range with at least two clean repetitions in reserve and no discomfort, the next sensible heavier dumbbell is preferred. If none exists, the app recommends one harder variable: reps, range, pause, tempo, unilateral work, or leverage. Missing the lower target, reaching unexpected failure, or reporting discomfort prevents progression.
 
@@ -166,7 +171,7 @@ The core training rationale is anchored in the 2026 ACSM resistance training pos
 - The app cannot diagnose pain, screen every medical condition, or replace professional care.
 - Data does not sync between devices; a JSON backup is required to move it.
 - Browser/private-mode storage behavior varies, and multiple open tabs use last-write behavior.
-- Notifications and progress-photo storage are intentionally out of scope.
+- Ten Strong cannot silently schedule iPhone notifications; it can provide an optional recurring Calendar event that the user explicitly approves.
 
 ## Future enhancements
 
@@ -175,7 +180,7 @@ The core training rationale is anchored in the 2026 ACSM resistance training pos
 - Persist the remaining seconds of an in-progress timed hold across full app termination
 - Optional encrypted device-to-device sync without an account
 - Additional low-load progression ladders and accessibility-tested movement visuals
-- Dedicated 90-day completion report with continuation blocks
+- A richer archived 90-day milestone report inside the ongoing continuation history
 
 ## Contributing and license
 

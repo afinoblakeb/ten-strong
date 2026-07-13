@@ -1,7 +1,7 @@
 export type Energy = 'low' | 'normal' | 'high'
 export type Soreness = 'none' | 'mild' | 'significant'
 export type Pain = 'none' | 'present'
-export type SessionStatus = 'completed' | 'partial' | 'recovery' | 'missed'
+export type SessionStatus = 'completed' | 'partial' | 'recovery' | 'safety' | 'missed'
 export type SessionKind = 'strength' | 'recovery' | 'assessment'
 export type MovementPattern = 'push' | 'pull' | 'squat' | 'hinge' | 'unilateral' | 'trunk' | 'carry' | 'recovery'
 
@@ -107,6 +107,7 @@ export interface SetLog {
   targetSeconds?: number
   tempo?: string
   discomfort?: boolean
+  mobilityComfort?: 'comfortable' | 'limited'
   note?: string
   completed: boolean
 }
@@ -119,6 +120,7 @@ export interface SessionLog {
   mode: RecommendationMode
   status: SessionStatus
   durationSeconds: number
+  activitySeconds?: number
   readiness: Readiness
   recommendationExplanation?: string
   sets: SetLog[]
@@ -135,6 +137,7 @@ export interface AssessmentResult {
   exerciseId?: string
   weight?: number
   variation?: string
+  tempo?: string
 }
 
 export interface BodyWeightEntry {

@@ -1,5 +1,5 @@
 import { beforeEach, describe, expect, it } from 'vitest'
-import { createDefaultData, loadData, parseImport, saveData, sessionsToCsv, summaryToHtml } from '../lib/storage'
+import { createDefaultData, habitReminderToIcs, loadData, parseImport, saveData, sessionsToCsv, summaryToHtml } from '../lib/storage'
 
 describe('local data and import', () => {
   beforeEach(() => localStorage.clear())
@@ -28,5 +28,12 @@ describe('local data and import', () => {
     const html=summaryToHtml(data)
     expect(html).not.toContain('<script>alert(1)</script>')
     expect(html).toContain('&lt;script&gt;alert(1)&lt;/script&gt;')
+  })
+  it('creates an optional recurring calendar cue without trusting profile text', () => {
+    const data=createDefaultData(); data.profile.startDate='2026-07-12'; data.profile.preferredTime='Morning'; data.profile.habitAnchor='After coffee;\nthen move'
+    const reminder=habitReminderToIcs(data)
+    expect(reminder).toContain('DTSTART:20260712T080000')
+    expect(reminder).toContain('RRULE:FREQ=DAILY')
+    expect(reminder).toContain('After coffee\\;\\nthen move')
   })
 })

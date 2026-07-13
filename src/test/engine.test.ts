@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest'
-import { adaptivePrescription, calculateProgression, getChallengeDay, recommendationFor, recommendationForDay } from '../lib/engine'
+import { activeSecondsForSet, adaptivePrescription, calculateProgression, consistencyRate, getChallengeDay, getProgramDay, recommendationFor, recommendationForDay, sessionStatus, setComparisonKey, trainingTemplateForDay } from '../lib/engine'
 import { createDefaultData } from '../lib/storage'
 import type { Readiness, SessionLog, SetLog, WorkoutItem } from '../types'
 
@@ -14,7 +14,7 @@ describe('readiness', () => {
     }
   })
   it('uses recovery for significant soreness even with only five minutes', () => expect(recommendationFor({ ...base,soreness:'significant',minutes:5 },'strength').mode).toBe('recovery'))
-  it('uses the dedicated fallback when time is short', () => expect(recommendationFor({ ...base,minutes:5 },'strength').mode).toBe('minimum'))
+  it('keeps the ten-minute daily contract when legacy readiness says five minutes', () => expect(recommendationFor({ ...base,minutes:5 },'strength').mode).toBe('normal'))
   it('reduces volume for low energy or mild soreness', () => {
     expect(recommendationFor({ ...base,energy:'low' },'strength').mode).toBe('reduced')
     expect(recommendationFor({ ...base,soreness:'mild' },'strength').mode).toBe('reduced')
@@ -33,6 +33,7 @@ describe('calendar date calculation', () => {
     expect(getChallengeDay('2026-07-12',new Date(2026,6,12,23,30))).toBe(1)
     expect(getChallengeDay('2026-07-12',new Date(2026,6,13,0,30))).toBe(2)
     expect(getChallengeDay('2025-01-01',new Date(2026,6,12))).toBe(90)
+    expect(getProgramDay('2025-01-01',new Date(2026,6,12))).toBeGreaterThan(90)
   })
   it('does not shift a local date around daylight-saving boundaries', () => {
     expect(getChallengeDay('2026-03-07',new Date(2026,2,9,12))).toBe(3)
@@ -81,5 +82,46 @@ describe('real challenge adaptation', () => {
     const data=createDefaultData(); data.profile.hasSturdyChair=false
     const pushItem:WorkoutItem={exerciseId:'incline-pushup',sets:1,repMin:5,repMax:10,tempo:'2–1–1',restSeconds:10}
     expect(adaptivePrescription(data,pushItem,null,'baseline')).toMatchObject({ variation:'Wall push-up',weight:null })
+  })
+
+  it('caps calendar intensity until enough strength practices are logged', () => {
+    const data=createDefaultData()
+    expect(trainingTemplateForDay(data,64)).toMatchObject({plannedTemplateId:'intense-a',templateId:'foundation-a',tier:1})
+    const strengthSession=(day:number):SessionLog=>({id:`tier-${day}`,day,date:'2026-07-01',templateId:'foundation-a',mode:'normal',status:'completed',durationSeconds:600,readiness:base,sets:[...logs(10,2),{id:`push-${day}`,exerciseId:'incline-pushup',setNumber:1,reps:10,rir:2,formQuality:'good',completed:true}]})
+    data.sessions=[...Array.from({length:28},(_,index)=>strengthSession(index+1)),...Array.from({length:7},(_,index)=>strengthSession(57+index))]
+    expect(trainingTemplateForDay(data,64)).toMatchObject({templateId:'intense-a',tier:4})
+  })
+
+  it('requires a true ten-minute practice for consistency credit', () => {
+    const data=createDefaultData(); data.profile.onboardingComplete=true; data.profile.startDate='2026-07-12'
+    const partial=(day:number,durationSeconds:number):SessionLog=>({id:`p-${day}`,day,date:'2026-07-12',templateId:'foundation-a',mode:'normal',status:'partial',durationSeconds,readiness:base,sets:[]})
+    data.sessions=[partial(1,599)]
+    expect(consistencyRate(data,new Date(2026,6,12))).toBe(0)
+    data.sessions=[partial(1,600)]
+    expect(consistencyRate(data,new Date(2026,6,12))).toBe(100)
+    data.sessions=[{...partial(1,900),activitySeconds:599}]
+    expect(consistencyRate(data,new Date(2026,6,12))).toBe(0)
+    data.sessions=[{...partial(1,0),status:'safety',mode:'stop'}]
+    expect(consistencyRate(data,new Date(2026,6,12))).toBe(100)
+  })
+
+  it('keeps comparison keys honest across load, version, and tempo', () => {
+    const first=logs(10,2)[0]; first.variation='Goblet squat'; first.tempo='3–1–1'
+    expect(setComparisonKey(first)).not.toBe(setComparisonKey({...first,weight:15}))
+    expect(setComparisonKey(first)).not.toBe(setComparisonKey({...first,variation:'Paused squat'}))
+    expect(setComparisonKey(first)).not.toBe(setComparisonKey({...first,tempo:'4–1–1'}))
+  })
+
+  it('does not call a skipped recovery sequence complete', () => {
+    const recoveryLog:SetLog={id:'r',exerciseId:'cat-cow-flow',setNumber:1,seconds:120,rir:4,completed:false}
+    expect(sessionStatus([recoveryLog],'recovery')).toBe('partial')
+    expect(sessionStatus([{...recoveryLog,completed:true}],'recovery')).toBe('recovery')
+  })
+
+  it('counts active movement from tempo and both sides without counting skipped work', () => {
+    expect(activeSecondsForSet({completed:true,reps:8,tempo:'3–1–1'})).toBe(40)
+    expect(activeSecondsForSet({completed:true,reps:8,tempo:'2–1–1',perSide:true})).toBe(64)
+    expect(activeSecondsForSet({completed:true,seconds:20,tempo:'steady',perSide:true})).toBe(40)
+    expect(activeSecondsForSet({completed:false,reps:20,tempo:'3–1–1'})).toBe(0)
   })
 })

@@ -25,7 +25,7 @@ The application uses `HashRouter`. GitHub Pages cannot provide an SPA rewrite fo
 
 ## Content model
 
-`src/data/program.ts` defines phases and reusable workout templates, then deterministically expands those structures into exactly 90 `ProgramDay` records. Explicit overrides handle Day 1, Day 89, and Day 90. Tests assert continuous numbering, valid references, and phase boundaries.
+`src/data/program.ts` defines phases and reusable workout templates, then deterministically expands those structures into exactly 90 challenge records. Explicit overrides handle Day 1, Day 89, and Day 90. Day 91 and later use a sustainable seven-day continuation cycle without clearing history. Tests assert continuous challenge numbering, valid references, phase boundaries, ten-minute mobility totals, and continuation behavior.
 
 Each exercise carries its own coaching metadata. UI components resolve an exercise by ID; they do not hardcode form cues or substitutions.
 
@@ -34,10 +34,12 @@ Each exercise carries its own coaching metadata. UI components resolve an exerci
 `src/lib/engine.ts` contains pure functions and uses this precedence:
 
 1. Pain safety override
-2. Significant soreness or planned recovery
-3. Five-minute fallback
-4. Low energy or mild soreness
+2. Significant soreness or planned mobility
+3. Low energy or mild soreness
+4. Exposure-earned training tier
 5. Planned workout
+
+Every non-safety completion also passes a separate daily activity gate. Completed timed work contributes actual seconds; completed repetition work contributes a tempo-based estimate. If primary work ends before 600 active seconds, the workout draft enters a persisted mobility-finisher state for the remainder. Elapsed reading or logging time is stored separately and cannot satisfy the active-minute gate.
 
 Exercise progression returns an action, next target, and plain-language explanation from the same result object. This prevents the UI explanation from drifting away from the actual rule.
 
@@ -49,7 +51,7 @@ Challenge dates are stored as local `YYYY-MM-DD` strings. They are parsed into `
 
 `AppStateProvider` owns the versioned `AppData` object and writes it to `localStorage` after meaningful state changes. Imports are parsed with JSON, validated with Zod, and only then replace current state. Session IDs make completion additions idempotent.
 
-The active workout writes a small draft after each logged set. Refreshing the same workout restores the completed set list and queue position. A finished session removes the draft.
+The active workout writes a small draft after each logged set. Refreshing the same workout restores the completed set list, queue position, active seconds, and mobility-finisher countdown. A finished session removes the draft. Safety stops are persisted as neutral daily records and remain outside strength progression.
 
 ## Offline and installation
 

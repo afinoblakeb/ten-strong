@@ -7,11 +7,24 @@ test.beforeEach(async ({ page }) => {
   await page.reload()
 })
 
+async function finishTenMinutePractice(page: import('@playwright/test').Page) {
+  await expect(page.getByRole('heading',{name:/Keep moving for/})).toBeVisible()
+  await page.waitForTimeout(50)
+  await page.evaluate(()=>{for(let index=0;index<localStorage.length;index+=1){const key=localStorage.key(index);if(!key?.startsWith('ten-strong-draft-d'))continue;const draft=JSON.parse(localStorage.getItem(key)??'{}');draft.elapsed=599;draft.activeSeconds=599;draft.finisherRemaining=1;draft.finishing=true;draft.startedAt=Date.now();localStorage.setItem(key,JSON.stringify(draft))}})
+  await page.reload()
+  await expect(page.getByRole('button',{name:/remaining/})).toBeDisabled()
+  await page.evaluate(()=>{for(let index=0;index<localStorage.length;index+=1){const key=localStorage.key(index);if(!key?.startsWith('ten-strong-draft-d'))continue;const draft=JSON.parse(localStorage.getItem(key)??'{}');draft.elapsed=600;draft.activeSeconds=600;draft.finisherRemaining=0;draft.finishing=true;draft.startedAt=Date.now();localStorage.setItem(key,JSON.stringify(draft))}})
+  await page.reload()
+  await page.getByRole('button',{name:/Complete today/}).click()
+}
+
 test('onboards, completes Day 1, and restores history after refresh', async ({ page }) => {
   await expect(page.getByRole('heading',{ name:/Build practical strength/ })).toBeVisible()
   await page.getByLabel('Dumbbell weights in pounds optional').fill('10, 15, 25')
+  await page.getByLabel('Habit anchor').fill('After coffee')
   await page.getByRole('button',{ name:'Begin my challenge' }).click()
   await expect(page.getByRole('heading',{ name:'Starting point' })).toBeVisible()
+  await expect(page.getByText('After coffee → open Ten Strong')).toBeVisible()
   await page.getByRole('button',{ name:/readiness/i }).click()
   await page.getByRole('button',{ name:/Start Day 1 early|Start Normal session/ }).click()
   await expect(page.getByRole('heading',{ name:'Movement Primer' })).toBeVisible()
@@ -21,6 +34,7 @@ test('onboards, completes Day 1, and restores history after refresh', async ({ p
   for (let index=0;index<3;index+=1) await page.getByRole('button',{ name:/Complete set/ }).click()
   await page.getByRole('button',{ name:/Start timer/ }).last().click()
   await page.getByRole('button',{ name:/Finish/ }).click()
+  await finishTenMinutePractice(page)
   await expect(page.getByRole('heading',{ name:'Today is in the books.' })).toBeVisible()
   await page.reload()
   await expect(page.getByRole('heading',{ name:'Today is in the books.' })).toBeVisible()
@@ -35,6 +49,10 @@ test('pain overrides the workout and the layout does not overflow a phone viewpo
   await expect(page.getByRole('heading',{ name:'Stop and check the symptom.' })).toBeVisible()
   const dimensions=await page.evaluate(()=>({scroll:document.documentElement.scrollWidth,client:document.documentElement.clientWidth}))
   expect(dimensions.scroll).toBeLessThanOrEqual(dimensions.client)
+  await page.getByRole('button',{name:'Log safety stop for today'}).click()
+  await expect(page.getByRole('heading',{name:'Safety stop logged'})).toBeVisible()
+  await page.reload()
+  await expect(page.getByRole('heading',{name:'Safety stop logged'})).toBeVisible()
 })
 
 test('onboarding and Today have no automatically detectable WCAG A/AA violations', async ({ page }) => {
@@ -86,20 +104,16 @@ test('swaps today to a separate bodyweight queue and restores the normal queue l
   await expect(page.getByRole('heading',{name:'Incline Push-up'})).toBeVisible()
 })
 
-test('chooses dedicated minimum and recovery sessions from readiness', async ({ page }) => {
+test('keeps the daily goal at ten minutes and chooses recovery for significant soreness', async ({ page }) => {
   await page.getByRole('button',{name:'Begin my challenge'}).click()
   await page.getByRole('button',{name:/readiness/i}).click()
-  await page.getByRole('button',{name:'5 minutes'}).click()
-  await expect(page.getByText('Five-minute minimum',{exact:true})).toBeVisible()
-  await page.getByRole('button',{name:/Start Day 1 early/}).click()
-  await expect(page.getByRole('heading',{name:'Incline Push-up'})).toBeVisible()
-  await page.getByRole('button',{name:/Exit workout/}).click()
-  await page.getByRole('button',{name:/readiness/i}).click()
-  await page.getByRole('button',{name:'5 minutes'}).click()
+  await expect(page.getByRole('button',{name:'5 minutes'})).toHaveCount(0)
   await page.getByRole('button',{name:'significant'}).click()
-  await expect(page.getByText('Recovery session',{exact:true})).toBeVisible()
+  await expect(page.getByText('Ten-minute mobility',{exact:true})).toBeVisible()
   await page.getByRole('button',{name:/Start Day 1 early/}).click()
-  await expect(page.getByRole('heading',{name:'Reset Flow'})).toBeVisible()
+  await expect(page.getByRole('heading',{name:'Breathing March'})).toBeVisible()
+  await expect(page.getByText(/How does today’s comfortable range feel/)).toBeVisible()
+  await expect(page.getByRole('button',{name:'Comfortable'})).toHaveClass(/selected/)
 })
 
 test('finishes Day 90 with the same assessment setup and a continuation plan', async ({ page }) => {
@@ -119,6 +133,20 @@ test('finishes Day 90 with the same assessment setup and a continuation plan', a
   for(let index=0;index<3;index+=1) await page.getByRole('button',{name:/Complete set/}).click()
   await page.getByRole('button',{name:/Start timer/}).last().click()
   await page.getByRole('button',{name:/Finish/}).click()
+  await finishTenMinutePractice(page)
   await expect(page.getByRole('heading',{name:'You finished Ten Strong.'})).toBeVisible()
   await expect(page.getByRole('heading',{name:'Keep the ten-minute anchor.'})).toBeVisible()
+})
+
+test('opens Day 91 continuation without resetting the completed challenge', async ({ page }) => {
+  const date=new Date(); date.setDate(date.getDate()-90)
+  const local=`${date.getFullYear()}-${String(date.getMonth()+1).padStart(2,'0')}-${String(date.getDate()).padStart(2,'0')}`
+  const profile={label:'My 90-Day Challenge',ageRange:'30–39',height:`5'9"`,weightLb:140,trainingHistory:'Formerly athletic; detrained',activityLevel:'Mostly sedentary',dumbbells:[10,15],limitations:'',preferredTime:'Morning',habitAnchor:'After coffee',hasSturdyChair:true,startDate:local,photoReminder:false,onboardingComplete:true}
+  const fixture=JSON.stringify({version:1,profile,sessions:[{id:'day-90',day:90,date:local,templateId:'final-assessment',mode:'normal',status:'completed',durationSeconds:600,readiness:{energy:'normal',soreness:'none',pain:'none',hasDumbbells:true,availableWeight:15,minutes:10},sets:[]}],assessments:[],bodyWeights:[],lastOpenedDate:local})
+  await page.addInitScript((serialized)=>localStorage.setItem('ten-strong-data-v1',serialized),fixture)
+  await page.goto('/?day91=1#/today')
+  await expect(page.getByText(/Continue Strong · Week 1/)).toBeVisible()
+  await expect(page.getByRole('heading',{name:'Ten-minute reset'})).toBeVisible()
+  await expect(page.getByText('10 min',{exact:true})).toBeVisible()
+  await expect(page.getByText('After coffee → open Ten Strong')).toBeVisible()
 })
