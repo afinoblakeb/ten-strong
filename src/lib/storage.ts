@@ -2,7 +2,9 @@ import { z } from 'zod'
 import type { AppData } from '../types'
 import { formatISODate } from './date'
 
-const STORAGE_KEY = 'ten-strong-data-v1'
+export const STORAGE_KEY = 'ten-strong-data-v1'
+const RECOVERY_KEY = 'ten-strong-data-v1-recovery'
+const DRAFT_PREFIX = 'ten-strong-draft-'
 
 const readinessSchema = z.object({ energy:z.enum(['low','normal','high']), soreness:z.enum(['none','mild','significant']), pain:z.enum(['none','present']), hasDumbbells:z.boolean().default(true), availableWeight:z.number().nullable(), minutes:z.union([z.literal(5),z.literal(10)]).optional() })
 const setSchema = z.object({ id:z.string(), exerciseId:z.string(), setNumber:z.number(), reps:z.number().optional(), seconds:z.number().optional(), weight:z.number().optional(), rir:z.number().min(0).max(4), formQuality:z.enum(['good','degraded']).optional(), variation:z.string().optional(), targetReps:z.number().optional(), targetRepMax:z.number().optional(), targetSeconds:z.number().optional(), tempo:z.string().optional(), discomfort:z.boolean().optional(), mobilityComfort:z.enum(['comfortable','limited']).optional(), note:z.string().optional(), completed:z.boolean() })
@@ -23,19 +25,95 @@ export function createDefaultData(): AppData {
   return { version:1, profile:{ label:'My 90-Day Challenge', ageRange:'30–39', height:`5'9"`, weightLb:140, trainingHistory:'Formerly athletic; detrained', activityLevel:'Mostly sedentary', dumbbells:[], limitations:'', preferredTime:'Morning', habitAnchor:'After I get ready', hasSturdyChair:true, startDate:formatISODate(tomorrow), photoReminder:false, onboardingComplete:false, soundCues:true }, sessions:[], assessments:[], bodyWeights:[], lastOpenedDate:formatISODate(new Date()) }
 }
 
+// --- Lenient recovery: clamp leaf values and drop only individually-invalid records so one bad set never discards 89 good days.
+function clampNumber(value:unknown,min:number,max:number,fallback:number):number{return typeof value==='number'&&Number.isFinite(value)?Math.min(max,Math.max(min,value)):fallback}
+const optionalNumber=z.preprocess((value)=>typeof value==='number'&&Number.isFinite(value)?value:undefined,z.number().optional())
+const optionalString=z.preprocess((value)=>typeof value==='string'?value:undefined,z.string().optional())
+function arrayOfValid<Schema extends z.ZodType>(schema:Schema){return z.preprocess((value)=>Array.isArray(value)?value:[],z.array(z.unknown())).transform((items)=>items.flatMap((item)=>{const result=schema.safeParse(item);return result.success?[result.data as z.output<Schema>]:[]}))}
+
+const lenientReadinessSchema=z.object({
+  energy:z.enum(['low','normal','high']).catch('normal'), soreness:z.enum(['none','mild','significant']).catch('none'), pain:z.enum(['none','present']).catch('none'),
+  hasDumbbells:z.boolean().catch(true), availableWeight:z.preprocess((value)=>typeof value==='number'&&Number.isFinite(value)?value:null,z.number().nullable()),
+  minutes:z.union([z.literal(5),z.literal(10)]).optional().catch(undefined),
+}).catch({energy:'normal',soreness:'none',pain:'none',hasDumbbells:true,availableWeight:null})
+const lenientSetSchema=z.object({
+  id:z.string(), exerciseId:z.string(), setNumber:z.preprocess((value)=>clampNumber(value,1,999,1),z.number()),
+  reps:optionalNumber, seconds:optionalNumber, weight:optionalNumber, rir:z.preprocess((value)=>clampNumber(value,0,4,0),z.number()),
+  formQuality:z.enum(['good','degraded']).optional().catch(undefined), variation:optionalString,
+  targetReps:optionalNumber, targetRepMax:optionalNumber, targetSeconds:optionalNumber, tempo:optionalString,
+  discomfort:z.boolean().optional().catch(undefined), mobilityComfort:z.enum(['comfortable','limited']).optional().catch(undefined),
+  note:optionalString, completed:z.boolean().catch(true),
+})
+const lenientSessionSchema=z.object({
+  id:z.string(), day:z.number().min(1), date:z.string(), templateId:z.string(),
+  mode:z.enum(['normal','reduced','recovery','minimum','stop']).catch('normal'), status:z.enum(['completed','partial','recovery','safety','missed']).catch('completed'),
+  durationSeconds:z.preprocess((value)=>clampNumber(value,0,Number.MAX_SAFE_INTEGER,0),z.number()),
+  activitySeconds:z.preprocess((value)=>typeof value==='number'&&Number.isFinite(value)&&value>=0?value:undefined,z.number().optional()),
+  readiness:lenientReadinessSchema, recommendationExplanation:optionalString, sets:arrayOfValid(lenientSetSchema), note:optionalString,
+})
+const lenientAssessmentSchema=z.object({ id:z.string(), date:z.string(), day:z.number(), metric:z.string(), value:z.number(), unit:z.string(), exerciseId:optionalString, weight:optionalNumber, variation:optionalString, tempo:optionalString })
+const lenientBodyWeightSchema=z.object({ date:z.string(), weightLb:z.number().positive() })
+
+function lenientRecover(parsed:unknown):AppData|null{
+  if(typeof parsed!=='object'||parsed===null||Array.isArray(parsed))return null
+  const defaults=createDefaultData()
+  const lenientSchema=z.object({
+    version:z.literal(1).catch(1),
+    profile:z.object({
+      label:z.string().catch(defaults.profile.label), ageRange:z.string().catch(defaults.profile.ageRange), height:z.string().catch(defaults.profile.height),
+      weightLb:z.preprocess((value)=>typeof value==='number'&&Number.isFinite(value)&&value>0?value:defaults.profile.weightLb,z.number()),
+      trainingHistory:z.string().catch(defaults.profile.trainingHistory), activityLevel:z.string().catch(defaults.profile.activityLevel),
+      dumbbells:z.preprocess((value)=>Array.isArray(value)?value.filter((item)=>typeof item==='number'&&Number.isFinite(item)&&item>0):[],z.array(z.number())),
+      limitations:z.string().catch(''), preferredTime:z.string().catch(defaults.profile.preferredTime), habitAnchor:z.string().catch(defaults.profile.habitAnchor),
+      hasSturdyChair:z.boolean().catch(true), startDate:z.string().catch(defaults.profile.startDate), photoReminder:z.boolean().catch(false),
+      onboardingComplete:z.boolean().catch(false), soundCues:z.boolean().catch(true), cueConfirmedThrough:optionalString,
+    }).catch(defaults.profile),
+    sessions:arrayOfValid(lenientSessionSchema), assessments:arrayOfValid(lenientAssessmentSchema), bodyWeights:arrayOfValid(lenientBodyWeightSchema),
+    lastOpenedDate:z.string().catch(defaults.lastOpenedDate), lastBackupAt:optionalString,
+  })
+  const recovered=lenientSchema.safeParse(parsed)
+  if(!recovered.success)return null
+  const strict=appDataSchema.safeParse(recovered.data)
+  return strict.success?strict.data:null
+}
+
+export interface LoadFailure { message:string; hasRecoveryCopy:boolean }
+let loadFailureState: LoadFailure | null = null
+export function getLoadFailure(): LoadFailure | null { return loadFailureState }
+export function clearLoadFailure() { loadFailureState = null }
+export function getRecoveryBlob(): string | null { try { return localStorage.getItem(RECOVERY_KEY) } catch { return null } }
+export function clearRecoveryBlob() { try { localStorage.removeItem(RECOVERY_KEY) } catch { /* storage unavailable */ } }
+
+// Keep the newest quarantine, but never overwrite an existing recovery copy with an emptier one.
+function quarantineRaw(raw:string){ try { const existing=localStorage.getItem(RECOVERY_KEY); if(existing!==null&&existing.length>raw.length)return; localStorage.setItem(RECOVERY_KEY,raw) } catch { /* quota exhausted — the original blob stays under STORAGE_KEY until the user acts */ } }
+
 export function loadData(): AppData {
-  try { const raw = localStorage.getItem(STORAGE_KEY); if (!raw) return createDefaultData(); return appDataSchema.parse(JSON.parse(raw)) }
-  catch { return createDefaultData() }
+  loadFailureState=null
+  let raw:string|null=null
+  try { raw=localStorage.getItem(STORAGE_KEY) } catch { raw=null }
+  if (!raw) return createDefaultData()
+  let parsed:unknown; let parseable=true
+  try { parsed=JSON.parse(raw) } catch { parseable=false }
+  if (parseable) { const strict=appDataSchema.safeParse(parsed); if (strict.success) return strict.data }
+  quarantineRaw(raw)
+  if (parseable) { const recovered=lenientRecover(parsed); if (recovered) return recovered }
+  loadFailureState={ message:'Your saved data could not be read.', hasRecoveryCopy:getRecoveryBlob()!==null }
+  return createDefaultData()
 }
 
 export function saveData(data: AppData) { localStorage.setItem(STORAGE_KEY, JSON.stringify(data)) }
-export function clearData() { localStorage.removeItem(STORAGE_KEY) }
+export function clearDrafts() { try { const keys:string[]=[]; for(let index=0;index<localStorage.length;index+=1){const key=localStorage.key(index); if(key?.startsWith(DRAFT_PREFIX))keys.push(key)} keys.forEach((key)=>localStorage.removeItem(key)) } catch { /* storage unavailable */ } }
+export function clearData() { localStorage.removeItem(STORAGE_KEY); clearDrafts() }
+
+export function markBackedUp(data: AppData): AppData { return { ...data, lastBackupAt:formatISODate(new Date()) } }
+export function exportBackup(data: AppData): { content:string; data:AppData } { const stamped=markBackedUp(data); return { content:JSON.stringify(stamped,null,2), data:stamped } }
 
 export function parseImport(raw: string): AppData {
   let parsed: unknown
   try { parsed = JSON.parse(raw) } catch { throw new Error('This file is not valid JSON.') }
+  if (typeof parsed==='object'&&parsed!==null&&'version' in parsed&&typeof (parsed as {version:unknown}).version==='number'&&(parsed as {version:number}).version>1) throw new Error('This backup is from a newer version of Ten Strong. Update the app on this device, then import it again.')
   const result = appDataSchema.safeParse(parsed)
-  if (!result.success) throw new Error('This backup does not match the Ten Strong data format.')
+  if (!result.success) { const issue=result.error.issues[0]; throw new Error(`This backup does not match the Ten Strong data format${issue?` (${issue.path.join('.')||'root'}: ${issue.message})`:'.'}`) }
   return result.data
 }
 

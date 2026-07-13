@@ -145,7 +145,9 @@ export function resolveTemplateById(id: string): WorkoutTemplate | undefined {
 }
 
 const phaseCycle: Record<number, string[]> = {
-  1: ['foundation-a','mobility-hips','foundation-b','mobility-upper','unilateral','recovery','foundation-a'],
+  // D8: the phase-1 cycle must not start AND end with the same template — the wraparound used to
+  // schedule foundation-a on days 8 and 9 back-to-back.
+  1: ['foundation-a','mobility-hips','foundation-b','mobility-upper','unilateral','recovery','foundation-b'],
   2: ['foundation-a','foundation-b','mobility-hips','unilateral','density','mobility-upper','foundation-b'],
   3: ['strength-a','strength-b','mobility-upper','unilateral','strength-a','density','mobility-hips'],
   4: ['intense-a','intense-b','mobility-hips','strength-a','intense-b','density','mobility-upper'],
@@ -154,6 +156,13 @@ const phaseCycle: Record<number, string[]> = {
 
 export const continuationCycle = ['recovery','foundation-a','mobility-hips','foundation-b','mobility-upper','unilateral','density']
 
+// D8: generic "Ten-minute reset" days rotate deterministically through the three mobility
+// templates by day number so recovery days vary instead of repeating byte-identically for 13 weeks.
+const recoveryRotation = ['recovery','mobility-hips','mobility-upper']
+export function recoveryTemplateIdForDay(day: number): string {
+  return recoveryRotation[((day % recoveryRotation.length) + recoveryRotation.length) % recoveryRotation.length]
+}
+
 export function phaseForDay(day: number): Phase {
   return phases.find((phase) => day >= phase.start && day <= phase.end) ?? phases[phases.length - 1]
 }
@@ -161,17 +170,19 @@ export function phaseForDay(day: number): Phase {
 export function programForDay(day: number): ProgramDay {
   const safeDay = Math.max(1, day)
   if (safeDay > 90) {
-    const templateId=continuationCycle[(safeDay-91)%continuationCycle.length]
+    const planned=continuationCycle[(safeDay-91)%continuationCycle.length]
+    const templateId=planned==='recovery'?recoveryTemplateIdForDay(safeDay):planned
     const template=templateById[templateId]
     return {day:safeDay,phaseId:5,templateId,kind:template.kind,title:template.title}
   }
   if (safeDay === 1) return { day:1, phaseId:1, templateId:'assessment', kind:'assessment', title:'Starting point' }
-  if (safeDay === 89) return { day:89, phaseId:5, templateId:'recovery', kind:'recovery', title:'Recover & prepare' }
+  if (safeDay === 89) return { day:89, phaseId:5, templateId:recoveryTemplateIdForDay(89), kind:'recovery', title:'Recover & prepare' }
   if (safeDay === 90) return { day:90, phaseId:5, templateId:'final-assessment', kind:'assessment', title:'Final assessment' }
   const phase = phaseForDay(safeDay)
   const cycle = phaseCycle[phase.id]
   const index = phase.id === 1 ? (safeDay - phase.start - 1 + cycle.length) % cycle.length : (safeDay - phase.start) % cycle.length
-  const templateId = cycle[index]
+  const planned = cycle[index]
+  const templateId = planned==='recovery'?recoveryTemplateIdForDay(safeDay):planned
   const template = templateById[templateId]
   return { day:safeDay, phaseId:phase.id, templateId, kind:template.kind, title:template.title }
 }
