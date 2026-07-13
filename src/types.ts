@@ -5,6 +5,14 @@ export type SessionStatus = 'completed' | 'partial' | 'recovery' | 'safety' | 'm
 export type SessionKind = 'strength' | 'recovery' | 'assessment'
 export type MovementPattern = 'push' | 'pull' | 'squat' | 'hinge' | 'unilateral' | 'trunk' | 'carry' | 'recovery'
 
+export interface MovementInstructions {
+  purpose: string
+  setup: string[]
+  motion: string[]
+  breathing: string
+  feel: string
+}
+
 export interface UserProfile {
   label: string
   ageRange: string
@@ -28,6 +36,7 @@ export interface Exercise {
   pattern: MovementPattern
   equipment: string[]
   visual: 'push' | 'squat' | 'row' | 'hinge' | 'press' | 'lunge' | 'core' | 'carry' | 'mobility'
+  instructions: MovementInstructions
   cues: string[]
   mistakes: string[]
   warning: string

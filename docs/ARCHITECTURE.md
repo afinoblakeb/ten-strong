@@ -6,7 +6,7 @@ Ten Strong is a static, local-first React application. Immutable program content
 
 ```text
 Editable program config
-  exercises.ts + program.ts
+  exercises.ts + instructions.ts + program.ts
           │
           ▼
 Pure domain rules ───────► Recommendation + explanation
@@ -27,7 +27,7 @@ The application uses `HashRouter`. GitHub Pages cannot provide an SPA rewrite fo
 
 `src/data/program.ts` defines phases and reusable workout templates, then deterministically expands those structures into exactly 90 challenge records. Explicit overrides handle Day 1, Day 89, and Day 90. Day 91 and later use a sustainable seven-day continuation cycle without clearing history. Tests assert continuous challenge numbering, valid references, phase boundaries, ten-minute mobility totals, and continuation behavior.
 
-Each exercise carries its own coaching metadata. UI components resolve an exercise by ID; they do not hardcode form cues or substitutions.
+Each exercise carries its own coaching metadata and resolves a unique written guide from `instructions.ts`. The workout runner exposes setup, ordered motion, breathing, expected sensation, the prescribed tempo, modifications, mistakes, and stop conditions. Generic pose drawings were removed because one schematic could not accurately represent materially different exercises.
 
 ## Recommendation engine
 

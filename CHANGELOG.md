@@ -1,5 +1,12 @@
 # Changelog
 
+## 1.3.0 — 2026-07-12
+
+- Removed the generic stick-figure exercise drawings from the workout runner and library
+- Added a unique written guide for every movement: setup, ordered motion, breathing, expected sensation, and stop guidance
+- Added plain-language explanations for every prescribed tempo
+- Added automated coverage that rejects missing or duplicated movement sequences and verifies the visual-free workout flow on mobile WebKit and desktop Chromium
+
 ## 1.2.0 — 2026-07-12
 
 - Made 600 active seconds a hard requirement for every safely completed day

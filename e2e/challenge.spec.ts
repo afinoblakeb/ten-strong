@@ -1,5 +1,6 @@
 import { expect, test } from '@playwright/test'
 import AxeBuilder from '@axe-core/playwright'
+import { exercises } from '../src/data/exercises'
 
 test.beforeEach(async ({ page }) => {
   await page.goto('/')
@@ -65,6 +66,24 @@ test('onboarding and Today have no automatically detectable WCAG A/AA violations
   await page.getByRole('button',{name:/Start Day 1 early|Start Normal session/}).click()
   const workout=await new AxeBuilder({page}).withTags(['wcag2a','wcag2aa']).analyze()
   expect(workout.violations).toEqual([])
+})
+
+test('uses specific written guidance instead of generic exercise drawings', async ({ page }) => {
+  await page.getByRole('button',{name:'Begin my challenge'}).click()
+  await page.getByRole('button',{name:/readiness/i}).click()
+  await page.getByRole('button',{name:/Start Day 1 early|Start Normal session/}).click()
+  await expect(page.locator('.exercise-visual')).toHaveCount(0)
+  const guide=page.getByRole('region',{name:/Written movement guide for Movement Primer/})
+  await expect(guide.getByRole('heading',{name:'Set up'})).toBeVisible()
+  await expect(guide.getByRole('heading',{name:'Do the motion'})).toBeVisible()
+  await expect(guide.getByText('Breathe',{exact:true})).toBeVisible()
+  await expect(guide.getByText('You should feel',{exact:true})).toBeVisible()
+  await expect(guide.getByText(/Today’s tempo:/)).toBeVisible()
+  await page.getByRole('button',{name:/Exit workout/}).click()
+  await page.goto('/#/exercises')
+  await expect(page.locator('.exercise-card')).toHaveCount(exercises.length)
+  const libraryAccessibility=await new AxeBuilder({page}).withTags(['wcag2a','wcag2aa']).analyze()
+  expect(libraryAccessibility.violations).toEqual([])
 })
 
 test('restores an in-progress workout at the exact next exercise', async ({ page }) => {

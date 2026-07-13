@@ -20,7 +20,7 @@ No account, backend, analytics, paid API, or remote database is required. Person
 - Three distinct ten-minute mobility sessions and a sustainable Day 91+ continuation week
 - Daily habit-anchor reinforcement, weekly cue review, and an optional recurring iPhone calendar cue
 - Push, pull, squat, hinge, unilateral leg, trunk, overhead, and carry coverage
-- Editable exercise library with cues, common mistakes, regressions, progressions, no-equipment alternatives, and stop conditions
+- Exercise-specific written guides with setup, ordered motion, breathing, expected sensation, tempo, modifications, mistakes, and stop conditions
 - Transparent progression through load, reps, range, tempo, pauses, leverage, and unilateral work
 - Calendar, training-minute chart, consistency, and exercise bests
 - Versioned local persistence with Zod validation
@@ -129,7 +129,8 @@ Progression is equally explicit. When all prescribed work reaches the top of its
 
 Training content is deliberately separated from React views:
 
-- `src/data/exercises.ts` — exercise definitions, cues, substitutions, and warnings
+- `src/data/exercises.ts` — exercise definitions, substitutions, and warnings
+- `src/data/instructions.ts` — exercise-specific setup, motion, breathing, and sensation guidance
 - `src/data/program.ts` — phases, workout templates, rotation logic, and assessment overrides
 - `src/data/methodology.ts` — plain-language methodology and source list
 - `src/lib/engine.ts` — readiness, date, progression, consistency, and missed-day rules
@@ -172,6 +173,7 @@ The core training rationale is anchored in the 2026 ACSM resistance training pos
 - Data does not sync between devices; a JSON backup is required to move it.
 - Browser/private-mode storage behavior varies, and multiple open tabs use last-write behavior.
 - Ten Strong cannot silently schedule iPhone notifications; it can provide an optional recurring Calendar event that the user explicitly approves.
+- Written instructions cannot observe the user’s position or replace hands-on coaching. Generic generated motion diagrams are deliberately not used.
 
 ## Future enhancements
 
@@ -179,7 +181,7 @@ The core training rationale is anchored in the 2026 ACSM resistance training pos
 - Richer comparable-test capture for variation, support height, and range
 - Persist the remaining seconds of an in-progress timed hold across full app termination
 - Optional encrypted device-to-device sync without an account
-- Additional low-load progression ladders and accessibility-tested movement visuals
+- Professionally produced and independently reviewed movement video, if future testing shows that it improves instruction beyond the written guides
 - A richer archived 90-day milestone report inside the ongoing continuation history
 
 ## Contributing and license

@@ -1,6 +1,7 @@
 import type { Exercise } from '../types'
+import { instructionsByExerciseId } from './instructions'
 
-export const exercises: Exercise[] = [
+const exerciseDefinitions: Omit<Exercise,'instructions'>[] = [
   { id:'strength-primer', name:'Movement Primer', pattern:'recovery', equipment:['floor or wall'], visual:'mobility', cues:['Take two slow practice reps of the first movements','Use an easy range and steady breathing','Check that the area and support are stable'], mistakes:['Turning the primer into a workout','Forcing range','Rushing setup'], warning:'Stop if the warm-up produces pain, dizziness, or unusual symptoms.', regression:'Easy marching and breathing', standard:'Easy squat, hinge, press, and brace rehearsal', progression:'Not needed—keep this easy', noEquipment:'Easy marching and breathing' },
   { id:'ten-minute-finish', name:'Active Mobility Finish', pattern:'recovery', equipment:['floor or wall'], visual:'mobility', cues:['Keep moving gently until the daily clock reaches 10:00','Rotate through easy marching, wall reaches, and comfortable squats','Breathe steadily and finish feeling better'], mistakes:['Sitting through the timer','Forcing a stretch','Turning the finish into a hard conditioning block'], warning:'Stop for pain, dizziness, unusual shortness of breath, faintness, or loss of coordination.', regression:'Slow breathing with an easy standing weight shift', standard:'Easy continuous mobility', progression:'Use a slightly larger comfortable range', noEquipment:'Easy continuous mobility' },
   { id:'breathing-march', name:'Breathing March', pattern:'recovery', equipment:['floor or wall'], visual:'mobility', cues:['Stand tall and march slowly','Exhale fully every few steps','Use the wall if balance feels uncertain'], mistakes:['Rushing','Holding the breath','Lifting the knees beyond control'], warning:'Stop for dizziness, faintness, unusual shortness of breath, or loss of coordination.', regression:'Standing weight shifts with wall support', standard:'Slow breathing march', progression:'Pause briefly on each foot', noEquipment:'Slow breathing march' },
@@ -38,5 +39,10 @@ export const exercises: Exercise[] = [
   { id:'calf-raise', name:'Single-leg Calf Raise', pattern:'unilateral', perSide:true, equipment:['wall or chair'], visual:'squat', cues:['Use fingertips for balance','Rise through the big toe','Pause at the top','Lower fully and slowly'], mistakes:['Rolling to outer foot','Bouncing','Turning the ankle'], warning:'Use two legs and a smaller range for Achilles or foot discomfort.', regression:'Two-leg calf raise', standard:'Supported single-leg calf raise', progression:'Loaded calf raise', noEquipment:'Bodyweight calf raise' },
   { id:'recovery-flow', name:'Reset Flow', pattern:'recovery', equipment:['floor','wall'], visual:'mobility', cues:['Breathe slowly through the nose','Use comfortable ranges only','Keep the effort easy','Finish feeling better than you started'], mistakes:['Forcing stretches','Holding breath','Treating recovery as a test'], warning:'Stop any position that causes pain, dizziness, or neurological symptoms.', regression:'Easy walk and breathing', standard:'Cat-cow, hip hinge drill, wall slide, easy march', progression:'Longer easy walk later in the day', noEquipment:'Same movement flow' },
 ]
+
+export const exercises: Exercise[] = exerciseDefinitions.map((exercise)=>({
+  ...exercise,
+  instructions:instructionsByExerciseId[exercise.id as keyof typeof instructionsByExerciseId],
+}))
 
 export const exerciseById = Object.fromEntries(exercises.map((exercise) => [exercise.id, exercise]))

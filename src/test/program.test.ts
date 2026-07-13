@@ -23,7 +23,17 @@ describe('90-day program', () => {
       expect(exercise.noEquipment).toBeTruthy()
       expect(exercise.warning).toBeTruthy()
       expect(exercise.mistakes.length).toBeGreaterThan(0)
+      expect(exercise.instructions.purpose.length).toBeGreaterThan(20)
+      expect(exercise.instructions.setup.length).toBeGreaterThanOrEqual(2)
+      expect(exercise.instructions.motion.length).toBeGreaterThanOrEqual(3)
+      expect(exercise.instructions.breathing.length).toBeGreaterThan(15)
+      expect(exercise.instructions.feel.length).toBeGreaterThan(15)
     })
+  })
+
+  it('has a unique written motion sequence for every exercise', () => {
+    const sequences=exercises.map((exercise)=>exercise.instructions.motion.join('|'))
+    expect(new Set(sequences).size).toBe(exercises.length)
   })
 
   it('uses a calm Day 1 assessment and a final comparable assessment', () => {

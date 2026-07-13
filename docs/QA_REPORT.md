@@ -5,10 +5,10 @@ Date: 2026-07-12
 ## Automated results
 
 - TypeScript: passed
-- Vitest: 52 tests passed across 3 files
+- Vitest: 53 tests passed across 3 files
 - Oxlint: passed with no warnings
 - Production PWA build: passed
-- Playwright: 16 tests passed across desktop Chromium and iPhone 13 WebKit profiles
+- Playwright: 18 tests passed across desktop Chromium and iPhone 13 WebKit profiles
 - Accessibility: onboarding, Today, and active workout pass automated WCAG A/AA checks
 - Offline production test: passed
 - npm audit: 0 vulnerabilities reported at install time
@@ -32,6 +32,8 @@ Date: 2026-07-12
 - Timed unilateral movements use a two-side total timer while logging the weaker side’s result.
 - The saved habit anchor appears on Today and can generate an optional recurring iPhone Calendar cue.
 - Every workout template resolves to a no-dumbbell queue without loaded equipment requirements.
+- Every exercise has a unique written motion sequence with setup, breathing, expected sensation, modifications, and stop conditions.
+- The workout runner and exercise library contain no generic pose drawings or animation-based instruction.
 - Switching to a travel session preserves a separate draft and restores the normal loaded queue when dumbbells return.
 - Older backups without the daily dumbbell flag import with a safe backward-compatible default.
 - Top-of-range performance with 2+ RIR selects the next available weight.
@@ -46,7 +48,7 @@ Date: 2026-07-12
 
 ## Visual inspection
 
-Inspected the onboarding, Today, and active workout screens at 390 × 844. Typography, contrast, spacing, touch controls, mobile safe areas, exercise visuals, target hierarchy, and primary action visibility were reviewed from actual WebKit renders. Screenshots are stored under `docs/screenshots/`.
+Inspected the onboarding, Today, exercise library, and active workout screens at 390 × 844. Typography, contrast, spacing, touch controls, mobile safe areas, written movement hierarchy, scrolling, and primary action visibility were reviewed from actual WebKit renders. Screenshots are stored under `docs/screenshots/`.
 
 ## Remaining manual checks before a public release
 
