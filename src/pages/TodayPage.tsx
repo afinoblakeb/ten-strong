@@ -128,9 +128,10 @@ export function TodayPage() {
 
   useEffect(() => {
     if (!open) return
+    const trigger=ctaRef.current
     sheetRef.current?.focus()
     document.body.style.overflow='hidden'
-    return () => { document.body.style.overflow=''; ctaRef.current?.focus() }
+    return () => { document.body.style.overflow=''; trigger?.focus() }
   },[open])
 
   function onSheetKeyDown(event: KeyboardEvent) {
@@ -194,7 +195,7 @@ export function TodayPage() {
         {readiness.hasDumbbells?<label>Heaviest dumbbell available today<select value={readiness.availableWeight ?? ''} onChange={(e)=>setReadiness({...readiness,availableWeight:e.target.value?Number(e.target.value):null})}><option value="">Weight not listed / not sure</option>{inventory.map(w=><option key={w} value={w}>{w} lb</option>)}</select></label>
         :recommendation.mode!=='stop'&&<section className="bodyweight-queue" aria-live="polite"><strong>Bodyweight session queued — your dumbbell progression stays saved.</strong><div>{bodyweightPreview.items.map((item)=><span key={item.exerciseId}>{exerciseById[item.exerciseId].name}</span>)}</div>{template.kind==='assessment'&&<small>Repeat the test with the same setup later for a true comparison.</small>}</section>}
       </>}
-      <div className={`readiness-result ${recommendation.mode}`}><strong>{recommendation.title}</strong><p>{recommendation.explanation}</p><small>{targetRirForDay(day,recommendation.mode)}</small></div>
+      <div className={`readiness-result ${recommendation.mode}`}><strong>{recommendation.title}</strong><p>{recommendation.explanation}</p><small>{template.kind==='recovery'&&recommendation.mode!=='stop'?effortLabel:targetRirForDay(day,recommendation.mode)}</small></div>
       <div className="sheet-footer"><button className="button primary wide" onClick={start}>{sheetStartLabel}</button></div></section></div>}
   </div>
 }
