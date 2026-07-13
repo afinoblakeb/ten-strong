@@ -1,6 +1,6 @@
 import { describe, expect, it } from 'vitest'
 import { exerciseById, exercises } from '../data/exercises'
-import { bodyweightTemplateFor, continuationCycle, fullProgram, phaseForDay, programForDay, resolveTemplateById, templateById, templates } from '../data/program'
+import { bodyweightTemplateFor, continuationCycle, fullProgram, phaseForDay, programForDay, recoveryTemplateIdForDay, resolveTemplateById, templateById, templates } from '../data/program'
 
 describe('90-day program', () => {
   it('defines exactly 90 continuous days with valid references', () => {
@@ -43,9 +43,38 @@ describe('90-day program', () => {
   })
 
   it('continues after Day 90 without resetting history or repeating the assessment', () => {
-    expect(programForDay(91)).toMatchObject({day:91,templateId:'recovery',kind:'recovery'})
-    expect(Array.from({length:7},(_,index)=>programForDay(91+index).templateId)).toEqual(continuationCycle)
-    expect(programForDay(98).templateId).toBe('recovery')
+    expect(programForDay(91)).toMatchObject({day:91,kind:'recovery'})
+    const week=Array.from({length:7},(_,index)=>programForDay(91+index))
+    week.forEach((day,index)=>{
+      const planned=continuationCycle[index]
+      if (planned==='recovery') expect(templateById[day.templateId].kind).toBe('recovery')
+      else expect(day.templateId).toBe(planned)
+    })
+    expect(programForDay(98).kind).toBe('recovery')
+  })
+
+  it('day 8 differs from day 9', () => {
+    expect(programForDay(8).templateId).not.toBe(programForDay(9).templateId)
+  })
+
+  it('never schedules the same template on consecutive days through the challenge and first continuation week', () => {
+    for (let day=2; day<=97; day+=1) expect(programForDay(day).templateId,`day ${day} vs day ${day-1}`).not.toBe(programForDay(day-1).templateId)
+  })
+
+  it('rotates the generic recovery day through all three mobility templates deterministically', () => {
+    const rotated=[91,98,105].map((day)=>programForDay(day).templateId)
+    expect(new Set(rotated).size).toBe(3)
+    rotated.forEach((templateId)=>expect(templateById[templateId].kind).toBe('recovery'))
+    expect(programForDay(91).templateId).toBe(recoveryTemplateIdForDay(91))
+    // Deterministic: the same day always resolves to the same template.
+    expect(programForDay(89).templateId).toBe(recoveryTemplateIdForDay(89))
+    expect(templateById[programForDay(89).templateId].kind).toBe('recovery')
+  })
+
+  it('keeps recovery-day variety inside the 90 days instead of one repeated reset', () => {
+    const recoveryIds=fullProgram.filter((day)=>day.kind==='recovery').map((day)=>day.templateId)
+    expect(new Set(recoveryIds).size).toBeGreaterThanOrEqual(2)
+    recoveryIds.forEach((templateId)=>expect(templateById[templateId].kind).toBe('recovery'))
   })
 
   it('makes every recovery day a structured ten-minute mobility session', () => {

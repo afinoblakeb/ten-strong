@@ -8,10 +8,11 @@ export default defineConfig({
     registerType:'autoUpdate',
     includeAssets:['app-icon.svg','apple-touch-icon.png'],
     manifest:{
+      id:'./',
       name:'Ten Strong: A 90-Day Strength Challenge',
       short_name:'Ten Strong',
       description:'A private, progressive ten-minute daily strength challenge.',
-      theme_color:'#17221f',
+      theme_color:'#f3f1eb',
       background_color:'#f3f1eb',
       display:'standalone',
       start_url:'./#/',
@@ -22,6 +23,6 @@ export default defineConfig({
         {src:'app-icon-512.png',sizes:'512x512',type:'image/png',purpose:'maskable'},
       ],
     },
-    workbox:{navigateFallback:'index.html',globPatterns:['**/*.{js,css,html,svg,png,ico}']},
+    workbox:{navigateFallback:'index.html',globPatterns:['**/*.{js,css,html,svg,png,ico,woff2}']},
   })],
 })

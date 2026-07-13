@@ -28,6 +28,8 @@ export interface UserProfile {
   startDate: string
   photoReminder: boolean
   onboardingComplete: boolean
+  soundCues: boolean
+  cueConfirmedThrough?: string
 }
 
 export interface Exercise {
@@ -90,7 +92,7 @@ export interface Readiness {
   pain: Pain
   hasDumbbells: boolean
   availableWeight: number | null
-  minutes: 5 | 10
+  minutes?: 5 | 10
 }
 
 export type RecommendationMode = 'normal' | 'reduced' | 'recovery' | 'minimum' | 'stop'
@@ -112,7 +114,12 @@ export interface SetLog {
   rir: number
   formQuality?: 'good' | 'degraded'
   variation?: string
+  /** D1: the rep floor the user was actually asked for. Legacy logs (written before the
+   * progression rewrite, i.e. without targetRepMax) stored the range MAX here — the engine
+   * derives the floor from the template item in that case and never scores in-range work as a miss. */
   targetReps?: number
+  /** D1: top of the prescribed rep range; presence marks a post-rewrite log. */
+  targetRepMax?: number
   targetSeconds?: number
   tempo?: string
   discomfort?: boolean
@@ -161,4 +168,5 @@ export interface AppData {
   assessments: AssessmentResult[]
   bodyWeights: BodyWeightEntry[]
   lastOpenedDate: string
+  lastBackupAt?: string
 }
