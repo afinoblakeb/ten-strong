@@ -5,6 +5,7 @@ import { Layout } from './components/Layout'
 import { OnboardingPage } from './pages/OnboardingPage'
 import { TodayPage } from './pages/TodayPage'
 import { WorkoutPage } from './pages/WorkoutPage'
+import { DayPreviewPage } from './pages/DayPreviewPage'
 import { CalendarPage, ExerciseLibraryPage, MethodologyPage, MorePage, PlanPage, ProgressPage, RecoveryPage, SettingsPage } from './pages/ExplorePages'
 import './styles/base.css'
 import './styles/onboarding.css'
@@ -30,5 +31,5 @@ export function SkipLink() {
 function HomeRedirect() { const {data}=useAppState(); return <Navigate to={data.profile.onboardingComplete?'/today':'/onboarding'} replace/> }
 
 export default function App() {
-  return <><SkipLink/><TitleManager/><Routes><Route path="/onboarding" element={<OnboardingPage/>}/><Route path="/workout/:day" element={<WorkoutPage/>}/><Route element={<Layout/>}><Route path="/" element={<HomeRedirect/>}/><Route path="/today" element={<TodayPage/>}/><Route path="/calendar" element={<CalendarPage/>}/><Route path="/progress" element={<ProgressPage/>}/><Route path="/plan" element={<PlanPage/>}/><Route path="/exercises" element={<ExerciseLibraryPage/>}/><Route path="/recovery" element={<RecoveryPage/>}/><Route path="/methodology" element={<MethodologyPage/>}/><Route path="/settings" element={<SettingsPage/>}/><Route path="/more" element={<MorePage/>}/><Route path="*" element={<HomeRedirect/>}/></Route></Routes></>
+  return <><SkipLink/><TitleManager/><Routes><Route path="/onboarding" element={<OnboardingPage/>}/><Route path="/workout/:day" element={<WorkoutPage/>}/><Route element={<Layout/>}><Route path="/" element={<HomeRedirect/>}/><Route path="/today" element={<TodayPage/>}/><Route path="/calendar" element={<CalendarPage/>}/><Route path="/day/:day" element={<DayPreviewPage/>}/><Route path="/progress" element={<ProgressPage/>}/><Route path="/plan" element={<PlanPage/>}/><Route path="/exercises" element={<ExerciseLibraryPage/>}/><Route path="/recovery" element={<RecoveryPage/>}/><Route path="/methodology" element={<MethodologyPage/>}/><Route path="/settings" element={<SettingsPage/>}/><Route path="/more" element={<MorePage/>}/><Route path="*" element={<HomeRedirect/>}/></Route></Routes></>
 }

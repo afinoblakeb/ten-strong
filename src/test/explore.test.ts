@@ -1,6 +1,7 @@
 import { describe, expect, it } from 'vitest'
 import { calendarCellClass, calendarDayStatus, calendarGlyph, calendarStatusLabel, formatWeightLb, latestWeightLb, proteinRange, searchExercises } from '../pages/ExplorePages'
 import { exercises } from '../data/exercises'
+import { challengeDateForDay, formatISODate } from '../lib/date'
 import type { AppData, SessionLog, SessionStatus } from '../types'
 
 const log = (status: SessionStatus, activitySeconds?: number, durationSeconds = 0): SessionLog =>
@@ -29,6 +30,14 @@ describe('calendarDayStatus', () => {
   })
   it('a logged day wins over the today fallback', () => {
     expect(calendarDayStatus(log('completed', 650), 10, 10)).toBe('completed')
+  })
+})
+
+describe('challengeDateForDay', () => {
+  it('maps challenge days to local calendar dates across weeks and years', () => {
+    expect(formatISODate(challengeDateForDay('2026-07-13', 1))).toBe('2026-07-13')
+    expect(formatISODate(challengeDateForDay('2026-07-13', 8))).toBe('2026-07-20')
+    expect(formatISODate(challengeDateForDay('2026-12-30', 4))).toBe('2027-01-02')
   })
 })
 
