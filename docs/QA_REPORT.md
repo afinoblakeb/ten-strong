@@ -5,17 +5,19 @@ Date: 2026-07-12
 ## Automated results
 
 - TypeScript: passed
-- Vitest: 28 tests passed across 3 files
+- Vitest: 35 tests passed across 3 files
 - Oxlint: passed with no warnings
 - Production PWA build: passed
-- Playwright: 4 tests passed across desktop Chromium and iPhone 13 WebKit profiles
+- Playwright: 12 tests passed across desktop Chromium and iPhone 13 WebKit profiles
+- Accessibility: onboarding, Today, and active workout pass automated WCAG A/AA checks
+- Offline production test: passed
 - npm audit: 0 vulnerabilities reported at install time
 
 ## Verified critical behavior
 
 - Exactly 90 continuous program days resolve to valid templates.
 - Phase boundaries map to Days 1–14, 15–35, 36–63, 64–84, and 85–90.
-- Day 1 uses a conservative assessment; Day 89 uses comparable final tests.
+- Day 1 uses a conservative assessment; Day 90 repeats the recorded setup and produces a continuation plan.
 - Pain takes precedence over all energy, soreness, and time combinations.
 - Significant soreness takes precedence over a five-minute strength fallback.
 - Low energy and mild soreness reduce working volume.
@@ -26,6 +28,8 @@ Date: 2026-07-12
 - The critical onboarding → Day 1 → completion → refresh flow persists history.
 - An iPhone-sized viewport has no horizontal overflow on the safety path.
 - Production build emits a manifest, service worker, and offline precache.
+- GitHub Pages deployment succeeded at `https://afinoblakeb.github.io/ten-strong/`.
+- The live origin passed Chromium offline reload and WebKit mobile-width, service-worker, and precache checks.
 
 ## Visual inspection
 
@@ -33,7 +37,6 @@ Inspected the onboarding, Today, and active workout screens at 390 × 844. Typog
 
 ## Remaining manual checks before a public release
 
-- Smoke-test the final URL after its first real GitHub Pages deployment.
 - Confirm Add to Home Screen icon and standalone launch on a physical iPhone.
 - Confirm an offline relaunch on that physical device after the first successful load.
 - Run VoiceOver on a physical device through one entire workout.

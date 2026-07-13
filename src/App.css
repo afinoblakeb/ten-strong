@@ -22,3 +22,4 @@
 .time-cap{background:#f4e7d7;border:1px solid #d9b68e;border-radius:14px;padding:17px;margin-bottom:14px}.time-cap p{font-size:.84rem;margin:4px 0 12px}.previous-performance{margin-top:10px;padding-top:10px;border-top:1px solid rgba(44,110,99,.2);font-size:.78rem;color:var(--muted)}
 .step,.optional{color:#64716c}
 .preview-row .number,.bottom-nav a{color:#596761}
+.install-nudge{display:flex;gap:13px;align-items:flex-start;margin:24px 0;padding:16px;background:#e4eee9;border-radius:14px}.install-nudge svg{color:var(--accent);flex:none}.install-nudge div{display:grid;gap:3px}.install-nudge span{font-size:.82rem;color:var(--muted);line-height:1.45}

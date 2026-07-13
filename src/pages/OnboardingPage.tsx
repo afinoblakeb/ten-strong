@@ -1,6 +1,6 @@
 import { useState, type FormEvent } from 'react'
 import { useNavigate } from 'react-router-dom'
-import { ShieldCheck } from 'lucide-react'
+import { ShieldCheck, Smartphone } from 'lucide-react'
 import { useAppState } from '../AppState'
 import type { UserProfile } from '../types'
 
@@ -19,6 +19,7 @@ export function OnboardingPage() {
     <div className="eyebrow">Your 90-day starting line</div>
     <h1>Build practical strength.<br/><em>Ten minutes at a time.</em></h1>
     <p className="lede">A progressive, local-first challenge designed for returning to training without trying to win Day 1.</p>
+    <aside className="install-nudge"><Smartphone/><div><strong>Using your iPhone?</strong><span>Open this page in Safari, tap Share, then <b>Add to Home Screen</b>. Ten Strong will launch like an app and keep working offline.</span></div></aside>
     <form onSubmit={submit} className="stack-lg">
       <section className="card form-card"><span className="step">01</span><h2>Make it yours</h2>
         <label>Challenge label<input required value={profile.label} onChange={(e)=>setProfile({...profile,label:e.target.value})}/></label>

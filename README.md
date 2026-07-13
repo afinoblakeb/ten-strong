@@ -2,6 +2,8 @@
 
 **A 90-Day Strength Challenge built around ten intentional minutes per day.**
 
+**Live app:** [https://afinoblakeb.github.io/ten-strong/](https://afinoblakeb.github.io/ten-strong/)
+
 Ten Strong is a finished, mobile-first progressive web app for a detrained adult returning to strength training at home. It combines a complete 90-day program with a transparent rules-based progression engine, readiness adjustments, exercise substitutions, local workout logging, progress views, and offline support.
 
 No account, backend, analytics, paid API, or remote database is required. Personal data remains in the browser unless the user exports it.
@@ -12,7 +14,7 @@ No account, backend, analytics, paid API, or remote database is required. Person
 
 - Five-phase, 90-day strength plan with every day defined
 - 8–12 minute normal sessions and a dedicated five-minute fallback
-- Day 1 baseline and Day 89 comparable final assessment
+- Day 1 baseline and Day 90 comparable final assessment
 - Pain-first readiness logic, recovery days, and missed-day re-entry guidance
 - Push, pull, squat, hinge, unilateral leg, trunk, overhead, and carry coverage
 - Editable exercise library with cues, common mistakes, regressions, progressions, no-equipment alternatives, and stop conditions
@@ -52,6 +54,7 @@ npm run lint           # static lint checks
 npm test               # Vitest unit suite
 npm run test:coverage  # unit coverage report
 npm run test:e2e       # Playwright mobile + desktop critical flows
+npm run test:offline   # production build plus offline app-shell test
 npm run build          # typecheck and production PWA build
 npm run preview        # serve the production build locally
 ```
@@ -79,7 +82,7 @@ The static output is written to `dist/`. `vite.config.ts` uses `base: './'`, bun
 2. Open **Settings → Pages** in the repository.
 3. Under **Build and deployment**, select **GitHub Actions**.
 4. Push to `main`, or run the **Deploy Ten Strong to Pages** workflow manually.
-5. Open the URL reported by the deploy job.
+5. Open the URL reported by the deploy job. This repository is live at `https://afinoblakeb.github.io/ten-strong/`.
 
 The workflow runs locked dependency installation, typechecking, unit tests, lint, production build, artifact upload, and Pages deployment. Hash routing means routes such as `/#/progress` remain reliable under a repository subpath and after refresh.
 
@@ -166,7 +169,7 @@ The core training rationale is anchored in the 2026 ACSM resistance training pos
 
 - Side-specific logging and comparison for unilateral movements
 - Richer comparable-test capture for variation, support height, and range
-- Active-session timer deadlines persisted across browser termination
+- Persist the remaining seconds of an in-progress timed hold across full app termination
 - Optional encrypted device-to-device sync without an account
 - Additional low-load progression ladders and accessibility-tested movement visuals
 - Dedicated 90-day completion report with continuation blocks

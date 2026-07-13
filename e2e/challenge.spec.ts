@@ -29,7 +29,7 @@ test('onboards, completes Day 1, and restores history after refresh', async ({ p
 test('pain overrides the workout and the layout does not overflow a phone viewport', async ({ page }) => {
   await page.getByRole('button',{ name:'Begin my challenge' }).click()
   await page.getByRole('button',{ name:/readiness/i }).click()
-  await expect(page.getByRole('heading',{name:'How are you arriving?'})).toBeVisible()
+  await expect(page.getByRole('dialog',{name:'How are you arriving?'})).toBeVisible()
   await page.getByRole('button',{ name:'present' }).click()
   await page.getByRole('button',{ name:/Start Day 1 early|View safety guidance/ }).click()
   await expect(page.getByRole('heading',{ name:'Stop and check the symptom.' })).toBeVisible()
