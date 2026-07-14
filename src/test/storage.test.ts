@@ -32,6 +32,33 @@ describe('local data and import', () => {
     legacy.sessions=[{id:'legacy',day:1,date:'2026-07-12',templateId:'assessment',mode:'normal',status:'completed',durationSeconds:600,readiness:{energy:'normal',soreness:'none',pain:'none',availableWeight:10,minutes:10},sets:[]}]
     expect(parseImport(JSON.stringify(legacy)).sessions[0].readiness.hasDumbbells).toBe(true)
   })
+  it('repairs the one-session stale Day 1 resume without requiring a manual import', () => {
+    const data=createDefaultData(); data.profile.onboardingComplete=true; data.profile.startDate='2026-07-12'; data.bodyWeights=[{date:'2026-07-12',weightLb:140}]
+    const sunday=new Date(2026,6,12,19,24).getTime(), monday=new Date(2026,6,13,19,8).getTime()
+    data.sessions=[makeSession(1,{id:`2026-07-13-d1-${monday}`,date:'2026-07-12',templateId:'assessment',activitySeconds:600,sets:[
+      {...makeSession(1).sets[0],id:`strength-primer-1-${sunday}`,exerciseId:'strength-primer'},
+      {...makeSession(1).sets[0],id:`incline-pushup-1-${monday}`,exerciseId:'incline-pushup'},
+    ]}) as unknown as SessionLog]
+    data.assessments=[{id:'a1',date:'2026-07-12',day:1,metric:'clean repetitions',value:10,unit:'reps',exerciseId:'incline-pushup'}]
+    saveData(data)
+    const repaired=loadData()
+    expect(repaired.profile.startDate).toBe('2026-07-13')
+    expect(repaired.sessions[0].date).toBe('2026-07-13')
+    expect(repaired.assessments[0].date).toBe('2026-07-13')
+    expect(repaired.bodyWeights[0].date).toBe('2026-07-13')
+    expect(JSON.parse(localStorage.getItem(STORAGE_KEY)!).profile.startDate).toBe('2026-07-13')
+  })
+  it('does not rewrite an ordinary short workout that crosses midnight', () => {
+    const data=createDefaultData(); data.profile.onboardingComplete=true; data.profile.startDate='2026-07-12'
+    const beforeMidnight=new Date(2026,6,12,23,58).getTime(), afterMidnight=new Date(2026,6,13,0,5).getTime()
+    data.sessions=[makeSession(1,{id:`2026-07-13-d1-${afterMidnight}`,date:'2026-07-12',templateId:'assessment',activitySeconds:600,sets:[
+      {...makeSession(1).sets[0],id:`strength-primer-1-${beforeMidnight}`,exerciseId:'strength-primer'},
+      {...makeSession(1).sets[0],id:`incline-pushup-1-${afterMidnight}`,exerciseId:'incline-pushup'},
+    ]}) as unknown as SessionLog]
+    saveData(data)
+    expect(loadData().profile.startDate).toBe('2026-07-12')
+    expect(loadData().sessions[0].date).toBe('2026-07-12')
+  })
   it.each(['not json','{}','{"version":2}'])('rejects malformed or unsupported input without mutating storage', (raw) => {
     const original=createDefaultData(); saveData(original)
     expect(()=>parseImport(raw)).toThrow()
@@ -216,6 +243,13 @@ describe('AppStateProvider durability behavior', () => {
     expect(result.current.data.profile.startDate).toBe('2026-07-12')
     act(()=>result.current.addSession(makeSession(2,{date:'2026-07-13'}) as unknown as SessionLog))
     expect(result.current.data.profile.startDate).toBe('2026-07-12')
+  })
+  it('uses the first completed Day 1 as the lived challenge start', () => {
+    const data=createDefaultData(); data.profile.onboardingComplete=true; data.profile.startDate='2026-07-12'; saveData(data)
+    const {result}=mount()
+    act(()=>result.current.addSession(makeSession(1,{date:'2026-07-13',templateId:'assessment'}) as unknown as SessionLog))
+    expect(result.current.data.profile.startDate).toBe('2026-07-13')
+    expect(result.current.data.sessions[0].date).toBe('2026-07-13')
   })
   it('adopts a newer valid write from another tab and ignores invalid ones', () => {
     saveData(createDefaultData())

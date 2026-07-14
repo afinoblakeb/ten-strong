@@ -4,11 +4,10 @@ import { ArrowLeft, Check, ChevronRight, CircleAlert, Minus, Pause, Play, Plus, 
 import { useAppState } from '../AppState'
 import { exerciseById } from '../data/exercises'
 import { bodyweightTemplateFor, templateById } from '../data/program'
-import { activeSecondsForSet, adaptivePrescription, adjustedSetCount, buildSessionId, previousExerciseLogs, recommendationForDay, sessionStatus, setComparisonKey, targetRirForDay, templateForMode, trainingTemplateForDay } from '../lib/engine'
+import { activeSecondsForSet, adaptivePrescription, adjustedSetCount, buildSessionId, previousExerciseLogs, recommendationForDay, sessionPlacementAtCompletion, sessionStatus, setComparisonKey, targetRirForDay, templateForMode, trainingTemplateForDay } from '../lib/engine'
 import { fireCue, unlockAudio, type CueKind } from '../lib/cues'
 import { MovementGuide } from '../components/MovementGuide'
 import type { Readiness, Recommendation, SetLog, WorkoutItem } from '../types'
-import { formatISODate } from '../lib/date'
 
 interface LocationState { readiness?: Readiness; recommendation?: Recommendation }
 interface Draft { logs:SetLog[]; index:number; readiness:Readiness; recommendation:Recommendation; startedAt:number; elapsed:number; finishing:boolean; activeSeconds:number; finisherRemaining:number; signature?:string; updatedAt?:number }
@@ -266,15 +265,16 @@ export function WorkoutPage() {
   function finish(finalLogs=logs,finalActivity=activeSeconds){
     const duration=currentElapsed()
     if(finalActivity<600){setWorkRemaining(600-finalActivity);setWorkStarted(false);setWorkRunning(false);workDeadline.current=0;setFinishing(true);return}
-    // Midnight-safe: the session is dated from when it STARTED, so day and date always agree.
-    addSession({id:buildSessionId(day),day,date:formatISODate(new Date(startedAt.current)),templateId:template.id,mode:recommendation.mode,status:sessionStatus(finalLogs,recommendation.mode),durationSeconds:Math.max(60,duration),activitySeconds:finalActivity,readiness,recommendationExplanation:recommendation.explanation,sets:finalLogs})
+    const placement=sessionPlacementAtCompletion(data,day,startedAt.current,Date.now())
+    addSession({id:buildSessionId(placement.day),day:placement.day,date:placement.date,templateId:template.id,mode:recommendation.mode,status:sessionStatus(finalLogs,recommendation.mode),durationSeconds:Math.max(60,duration),activitySeconds:finalActivity,readiness,recommendationExplanation:recommendation.explanation,sets:finalLogs})
     localStorage.removeItem(dumbbellDraftKey)
     localStorage.removeItem(bodyweightDraftKey)
     localStorage.removeItem(legacyDraftKey)
     navigate('/today',{state:{completed:true}})
   }
   function logSafetyStop(){
-    addSession({id:buildSessionId(day),day,date:formatISODate(new Date(startedAt.current)),templateId:base.id,mode:'stop',status:'safety',durationSeconds:0,activitySeconds:0,readiness,recommendationExplanation:recommendation.explanation,sets:[],note:'Safety stop logged from readiness check.'})
+    const placement=sessionPlacementAtCompletion(data,day,startedAt.current,Date.now())
+    addSession({id:buildSessionId(placement.day),day:placement.day,date:placement.date,templateId:base.id,mode:'stop',status:'safety',durationSeconds:0,activitySeconds:0,readiness,recommendationExplanation:recommendation.explanation,sets:[],note:'Safety stop logged from readiness check.'})
     localStorage.removeItem(dumbbellDraftKey);localStorage.removeItem(bodyweightDraftKey);localStorage.removeItem(legacyDraftKey)
     navigate('/today',{state:{completed:true}})
   }
