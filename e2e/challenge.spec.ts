@@ -1,6 +1,7 @@
 import { expect, test } from '@playwright/test'
 import AxeBuilder from '@axe-core/playwright'
 import { exercises } from '../src/data/exercises'
+import { createDefaultData } from '../src/lib/storage'
 
 test.beforeEach(async ({ page }) => {
   await page.goto('/')
@@ -102,6 +103,31 @@ test('previews future days without changing progress or starting a workout', asy
   expect(drafts).toEqual([])
   await page.getByRole('link',{ name:'All 90 days' }).click()
   await expect(page.getByRole('heading',{ name:'90-day calendar' })).toBeVisible()
+})
+
+test('repairs a stale overnight Day 1 draft and opens the real Day 2', async ({ page }) => {
+  const localDate=(date:Date)=>`${date.getFullYear()}-${String(date.getMonth()+1).padStart(2,'0')}-${String(date.getDate()).padStart(2,'0')}`
+  const yesterday=new Date(); yesterday.setDate(yesterday.getDate()-1); yesterday.setHours(19,8,0,0)
+  const accidentalStart=new Date(yesterday); accidentalStart.setDate(accidentalStart.getDate()-1); accidentalStart.setHours(19,24,0,0)
+  const yesterdayISO=localDate(yesterday), accidentalISO=localDate(accidentalStart)
+  const fixture=createDefaultData()
+  fixture.profile={...fixture.profile,startDate:accidentalISO,onboardingComplete:true}
+  fixture.sessions=[{id:`${yesterdayISO}-d1-${yesterday.getTime()}`,day:1,date:accidentalISO,templateId:'assessment',mode:'reduced',status:'completed',durationSeconds:862,activitySeconds:600,readiness:{energy:'high',soreness:'none',pain:'none',hasDumbbells:true,availableWeight:10,minutes:10},sets:[
+    {id:`strength-primer-1-${accidentalStart.getTime()}`,exerciseId:'strength-primer',setNumber:1,seconds:60,rir:3,completed:true},
+    {id:`incline-pushup-1-${yesterday.getTime()}`,exerciseId:'incline-pushup',setNumber:1,reps:10,rir:3,completed:true},
+  ]}]
+  fixture.assessments=[{id:'baseline',date:accidentalISO,day:1,metric:'clean repetitions',value:10,unit:'reps',exerciseId:'incline-pushup'}]
+  await page.evaluate((data)=>localStorage.setItem('ten-strong-data-v1',JSON.stringify(data)),fixture)
+  await page.reload()
+
+  await expect(page.getByText('Day 2 of 90 · Phase 1')).toBeVisible()
+  await expect(page.getByRole('heading',{name:'Press + squat'})).toBeVisible()
+  const repaired=await page.evaluate(()=>JSON.parse(localStorage.getItem('ten-strong-data-v1')??'{}'))
+  expect(repaired.profile.startDate).toBe(yesterdayISO)
+  expect(repaired.sessions[0].date).toBe(yesterdayISO)
+  expect(repaired.assessments[0].date).toBe(yesterdayISO)
+  await page.getByRole('link',{name:'Calendar'}).click()
+  await expect(page.getByRole('link',{name:/Day 2, Press \+ squat, today\. Preview session\./})).toBeVisible()
 })
 
 test('onboarding and Today have no automatically detectable WCAG A/AA violations', async ({ page }) => {

@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest'
-import { activeSecondsForSet, adaptivePrescription, adjustedSetCount, consistencyRate, getChallengeDay, getProgramDay, recentDaysInfo, recommendationFor, recommendationForDay, sessionStatus, setComparisonKey, streakInfo, targetRirForDay, templateForMode, trainingTemplateForDay, usesDumbbell } from '../lib/engine'
+import { activeSecondsForSet, adaptivePrescription, adjustedSetCount, consistencyRate, getChallengeDay, getProgramDay, recentDaysInfo, recommendationFor, recommendationForDay, sessionPlacementAtCompletion, sessionStatus, setComparisonKey, streakInfo, targetRirForDay, templateForMode, trainingTemplateForDay, usesDumbbell } from '../lib/engine'
 import { createDefaultData } from '../lib/storage'
 import { templateById } from '../data/program'
 import { exerciseById } from '../data/exercises'
@@ -41,6 +41,20 @@ describe('calendar date calculation', () => {
   it('does not shift a local date around daylight-saving boundaries', () => {
     expect(getChallengeDay('2026-03-07',new Date(2026,2,9,12))).toBe(3)
     expect(getChallengeDay('2026-10-31',new Date(2026,10,2,12))).toBe(3)
+  })
+  it('keeps a continuous midnight workout on its start day', () => {
+    const data=createDefaultData(); data.profile.startDate='2026-07-12'; data.sessions=[]
+    const started=new Date(2026,6,12,23,55).getTime()
+    const completed=new Date(2026,6,13,0,10).getTime()
+    expect(sessionPlacementAtCompletion(data,1,started,completed)).toEqual({day:1,date:'2026-07-12',resumedOnLaterDay:false})
+  })
+  it('credits an overnight-abandoned draft to the day it was completed', () => {
+    const data=createDefaultData(); data.profile.startDate='2026-07-12'; data.sessions=[]
+    const started=new Date(2026,6,12,19).getTime()
+    const completed=new Date(2026,6,13,19).getTime()
+    expect(sessionPlacementAtCompletion(data,1,started,completed)).toEqual({day:1,date:'2026-07-13',resumedOnLaterDay:true})
+    data.sessions=[session(1,[],'assessment')]
+    expect(sessionPlacementAtCompletion(data,2,new Date(2026,6,13,19).getTime(),new Date(2026,6,14,19).getTime())).toEqual({day:3,date:'2026-07-14',resumedOnLaterDay:true})
   })
 })
 

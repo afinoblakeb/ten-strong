@@ -56,7 +56,10 @@ export function AppStateProvider({ children }: { children: ReactNode }) {
     addSession:(session) => setData((current) => {
       if (current.sessions.some((item) => item.id === session.id)) return current
       const assessmentSets = resolveTemplateById(session.templateId)?.kind === 'assessment' ? session.sets.filter((set) => set.completed).map((set) => ({ id:`${session.id}-${set.exerciseId}`, date:session.date, day:session.day, metric:set.reps !== undefined ? 'clean repetitions' : 'clean hold', value:set.reps ?? set.seconds ?? 0, unit:set.reps !== undefined ? 'reps' : 'seconds', exerciseId:set.exerciseId, weight:set.weight, variation:set.variation, tempo:set.tempo })) : []
-      const profile = session.date < current.profile.startDate ? { ...current.profile, startDate:session.date } : current.profile // started early: pull the challenge start back to lived reality
+      const isFirstCompletedDay=current.sessions.length===0&&session.day===1&&session.status!=='safety'
+      const profile = isFirstCompletedDay&&session.date!==current.profile.startDate
+        ? { ...current.profile, startDate:session.date }
+        : session.date < current.profile.startDate ? { ...current.profile, startDate:session.date } : current.profile // Day 1 establishes the lived start; an earlier session also pulls the calendar back.
       return { ...current, profile, sessions:[...current.sessions.filter((item) => item.day !== session.day), session], assessments:[...current.assessments.filter((item) => item.day !== session.day), ...assessmentSets] }
     }),
     addBodyWeight:(entry) => setData((current) => { const bodyWeights=[...current.bodyWeights.filter((item) => item.date !== entry.date), entry].sort((a,b) => a.date.localeCompare(b.date)); const latest=bodyWeights.at(-1)!; return { ...current, bodyWeights, profile:current.profile.weightLb === latest.weightLb ? current.profile : { ...current.profile, weightLb:latest.weightLb } } }),

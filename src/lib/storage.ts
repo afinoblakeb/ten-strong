@@ -87,6 +87,40 @@ export function clearRecoveryBlob() { try { localStorage.removeItem(RECOVERY_KEY
 // Keep the newest quarantine, but never overwrite an existing recovery copy with an emptier one.
 function quarantineRaw(raw:string){ try { const existing=localStorage.getItem(RECOVERY_KEY); if(existing!==null&&existing.length>raw.length)return; localStorage.setItem(RECOVERY_KEY,raw) } catch { /* quota exhausted — the original blob stays under STORAGE_KEY until the user acts */ } }
 
+function timestampFromSetId(id:string):number|null{
+  const match=id.match(/-(\d{13})$/)
+  if(!match)return null
+  const value=Number(match[1])
+  return Number.isFinite(value)?value:null
+}
+
+/**
+ * Repairs the narrowly identifiable v1 edge case where Day 1 was opened on the
+ * selected start date, abandoned overnight, and mostly completed the next day.
+ * The session id records its real completion date and set ids prove the long gap.
+ * Multiple-session histories and ordinary short workouts crossing midnight are untouched.
+ */
+export function repairStaleFirstDayResume(data:AppData):AppData{
+  if(data.sessions.length!==1)return data
+  const session=data.sessions[0]
+  const completionDate=session.id.match(/^(\d{4}-\d{2}-\d{2})-d1-/)?.[1]
+  if(!completionDate||session.day!==1||session.templateId.replace('--bodyweight','')!=='assessment'||session.status==='safety'||(session.activitySeconds??session.durationSeconds)<600)return data
+  if(data.profile.startDate!==session.date||completionDate<=session.date)return data
+  const timestamps=session.sets.filter((set)=>set.completed).map((set)=>timestampFromSetId(set.id)).filter((value):value is number=>value!==null)
+  if(!timestamps.length)return data
+  const setDates=timestamps.map((value)=>formatISODate(new Date(value)))
+  const longGap=Math.max(...timestamps)-Math.min(...timestamps)>2*60*60*1000
+  if(!setDates.includes(completionDate)||!longGap)return data
+  const bodyWeights=data.bodyWeights.length===1&&data.bodyWeights[0].date===session.date?[{...data.bodyWeights[0],date:completionDate}]:data.bodyWeights
+  return {...data,profile:{...data.profile,startDate:completionDate},sessions:[{...session,date:completionDate}],assessments:data.assessments.map((result)=>result.day===1&&result.date===session.date?{...result,date:completionDate}:result),bodyWeights}
+}
+
+function adoptRepair(data:AppData):AppData{
+  const repaired=repairStaleFirstDayResume(data)
+  if(repaired!==data)try{localStorage.setItem(STORAGE_KEY,JSON.stringify(repaired))}catch{/* keep the repaired in-memory copy; AppState will retry persistence */}
+  return repaired
+}
+
 export function loadData(): AppData {
   loadFailureState=null
   let raw:string|null=null
@@ -94,9 +128,9 @@ export function loadData(): AppData {
   if (!raw) return createDefaultData()
   let parsed:unknown; let parseable=true
   try { parsed=JSON.parse(raw) } catch { parseable=false }
-  if (parseable) { const strict=appDataSchema.safeParse(parsed); if (strict.success) return strict.data }
+  if (parseable) { const strict=appDataSchema.safeParse(parsed); if (strict.success) return adoptRepair(strict.data) }
   quarantineRaw(raw)
-  if (parseable) { const recovered=lenientRecover(parsed); if (recovered) return recovered }
+  if (parseable) { const recovered=lenientRecover(parsed); if (recovered) return adoptRepair(recovered) }
   loadFailureState={ message:'Your saved data could not be read.', hasRecoveryCopy:getRecoveryBlob()!==null }
   return createDefaultData()
 }
@@ -114,7 +148,7 @@ export function parseImport(raw: string): AppData {
   if (typeof parsed==='object'&&parsed!==null&&'version' in parsed&&typeof (parsed as {version:unknown}).version==='number'&&(parsed as {version:number}).version>1) throw new Error('This backup is from a newer version of Ten Strong. Update the app on this device, then import it again.')
   const result = appDataSchema.safeParse(parsed)
   if (!result.success) { const issue=result.error.issues[0]; throw new Error(`This backup does not match the Ten Strong data format${issue?` (${issue.path.join('.')||'root'}: ${issue.message})`:'.'}`) }
-  return result.data
+  return repairStaleFirstDayResume(result.data)
 }
 
 export function downloadFile(name: string, content: string, type: string) {

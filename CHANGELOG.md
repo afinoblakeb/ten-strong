@@ -1,5 +1,15 @@
 # Changelog
 
+## 1.4.2 — 2026-07-14
+
+- Stale workout drafts resumed on a later day are now credited to the day they
+  are actually completed, while ordinary workouts crossing midnight keep their
+  original date
+- A first completed Day 1 now establishes the lived challenge start date, so an
+  abandoned pre-start draft cannot create a phantom missed day
+- Added a narrowly scoped, automatic repair for the affected one-session Day 1
+  data pattern; established histories are never rewritten
+
 ## 1.4.1 — 2026-07-13
 
 - Added read-only previews for every challenge day from the Calendar and Plan

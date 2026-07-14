@@ -12,6 +12,22 @@ export function getProgramDay(startDate: string, now = new Date()): number {
   return Math.max(1, differenceInCalendarDays(now, parseLocalDate(startDate)) + 1)
 }
 
+export interface SessionPlacement { day:number; date:string; resumedOnLaterDay:boolean }
+
+/**
+ * A normal workout that happens to cross midnight belongs to the day it started.
+ * A draft abandoned for more than two hours and completed on a later date belongs
+ * to the completion date, so yesterday's stale draft cannot create a phantom miss today.
+ */
+export function sessionPlacementAtCompletion(data: Pick<AppData,'profile'|'sessions'>, scheduledDay: number, startedAt: number, completedAt: number): SessionPlacement {
+  const startedDate=formatISODate(new Date(startedAt))
+  const completedDate=formatISODate(new Date(completedAt))
+  const resumedOnLaterDay=startedDate!==completedDate&&completedAt-startedAt>2*60*60*1000
+  if(!resumedOnLaterDay)return {day:scheduledDay,date:startedDate,resumedOnLaterDay:false}
+  const firstSession=data.sessions.length===0&&scheduledDay===1
+  return {day:firstSession?1:getProgramDay(data.profile.startDate,new Date(completedAt)),date:completedDate,resumedOnLaterDay:true}
+}
+
 export function recommendationFor(readiness: Readiness, plannedKind: 'strength' | 'recovery' | 'assessment'): Recommendation {
   if (readiness.pain === 'present') return { mode:'stop', title:'Pause today', explanation:'Pain was reported. Do not train through sharp, sudden, worsening, or unexplained symptoms. Seek appropriate professional guidance when symptoms are concerning.', setMultiplier:0 }
   if (plannedKind === 'recovery' || readiness.soreness === 'significant') return { mode:'recovery', title:'Ten-minute mobility', explanation:readiness.soreness === 'significant' ? 'Significant soreness shifts today to ten minutes of easy, comfortable mobility—never forced stretching.' : 'This planned mobility day builds the daily movement habit while supporting the next strength session.', setMultiplier:0.5 }
